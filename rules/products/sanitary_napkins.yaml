@@ -1,0 +1,23 @@
+product: sanitary_napkins
+category: general
+description: Product-specific rules for Sanitary Napkins
+
+extra_mandatory:
+  []
+
+custom_checks:
+  - rule_id: RULE_SANITARY_NAPKINS_001
+    field: generic_name
+    severity: medium
+    message: "Should clearly indicate the product is Sanitary Napkins"
+    suggestion: "Generic name should reflect that it is Sanitary Napkins"
+  - rule_id: RULE_SANITARY_NAPKINS_002
+    field: net_quantity
+    severity: medium
+    message: "Net quantity should be appropriately declared for Sanitary Napkins"
+    suggestion: "Use standard units (g, ml, L, Nos etc.)"
+
+notes:
+  - Product-specific rules for Sanitary Napkins
+  - Category: general
+  - Additional FSSAI / BIS / D&C rules may also apply depending on product

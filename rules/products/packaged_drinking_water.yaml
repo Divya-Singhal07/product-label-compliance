@@ -1,0 +1,30 @@
+product: packaged_drinking_water
+category: food
+description: Product-specific rules for Packaged Drinking Water
+
+extra_mandatory:
+  - field: best_before
+    severity: high
+    label: "Best Before date is mandatory"
+  - field: mfg_date
+    severity: high
+    label: "Date of packaging / manufacturing"
+
+custom_checks:
+  - rule_id: RULE_WATER_001
+    field: generic_name
+    severity: high
+    message: "Must clearly state 'Packaged Drinking Water' or 'Mineral Water'"
+  - rule_id: RULE_WATER_002
+    field: net_quantity
+    severity: high
+    message: "Net quantity must be in ml or L"
+  - rule_id: RULE_WATER_003
+    field: manufacturer
+    severity: medium
+    message: "BIS certification mark is highly recommended"
+
+notes:
+  - Product-specific rules for Packaged Drinking Water
+  - Category: food
+  - Additional FSSAI / BIS / D&C rules may also apply depending on product

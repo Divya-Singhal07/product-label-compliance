@@ -1,0 +1,23 @@
+product: handwash
+category: cosmetics
+description: Product-specific rules for Hand Wash
+
+extra_mandatory:
+  []
+
+custom_checks:
+  - rule_id: RULE_HANDWASH_001
+    field: generic_name
+    severity: medium
+    message: "Should clearly indicate the product is Hand Wash"
+    suggestion: "Generic name should reflect that it is Hand Wash"
+  - rule_id: RULE_HANDWASH_002
+    field: net_quantity
+    severity: medium
+    message: "Net quantity should be appropriately declared for Hand Wash"
+    suggestion: "Use standard units (g, ml, L, Nos etc.)"
+
+notes:
+  - Product-specific rules for Hand Wash
+  - Category: cosmetics
+  - Additional FSSAI / BIS / D&C rules may also apply depending on product

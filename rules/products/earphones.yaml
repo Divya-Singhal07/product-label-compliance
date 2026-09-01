@@ -1,0 +1,21 @@
+product: earphones
+category: electronic
+description: Product-specific rules for Earphones / Headphones
+
+extra_mandatory:
+  []
+
+custom_checks:
+  - rule_id: RULE_EARPHONE_001
+    field: generic_name
+    severity: medium
+    message: "Should clearly mention Earphones / Headphones + model"
+  - rule_id: RULE_EARPHONE_002
+    field: country_of_origin
+    severity: medium
+    message: "Country of Origin important if imported"
+
+notes:
+  - Product-specific rules for Earphones / Headphones
+  - Category: electronic
+  - Additional FSSAI / BIS / D&C rules may also apply depending on product

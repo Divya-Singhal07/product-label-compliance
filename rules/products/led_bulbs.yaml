@@ -1,0 +1,23 @@
+product: led_bulbs
+category: electronic
+description: Product-specific rules for LED Bulbs
+
+extra_mandatory:
+  []
+
+custom_checks:
+  - rule_id: RULE_LED_BULBS_001
+    field: generic_name
+    severity: medium
+    message: "Should clearly indicate the product is LED Bulbs"
+    suggestion: "Generic name should reflect that it is LED Bulbs"
+  - rule_id: RULE_LED_BULBS_002
+    field: net_quantity
+    severity: medium
+    message: "Net quantity should be appropriately declared for LED Bulbs"
+    suggestion: "Use standard units (g, ml, L, Nos etc.)"
+
+notes:
+  - Product-specific rules for LED Bulbs
+  - Category: electronic
+  - Additional FSSAI / BIS / D&C rules may also apply depending on product

@@ -1,0 +1,23 @@
+product: toothpaste
+category: cosmetics
+description: Product-specific rules for Toothpaste
+
+extra_mandatory:
+  []
+
+custom_checks:
+  - rule_id: RULE_TOOTHPASTE_001
+    field: generic_name
+    severity: medium
+    message: "Should clearly indicate the product is Toothpaste"
+    suggestion: "Generic name should reflect that it is Toothpaste"
+  - rule_id: RULE_TOOTHPASTE_002
+    field: net_quantity
+    severity: medium
+    message: "Net quantity should be appropriately declared for Toothpaste"
+    suggestion: "Use standard units (g, ml, L, Nos etc.)"
+
+notes:
+  - Product-specific rules for Toothpaste
+  - Category: cosmetics
+  - Additional FSSAI / BIS / D&C rules may also apply depending on product

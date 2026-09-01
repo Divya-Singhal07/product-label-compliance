@@ -1,0 +1,49 @@
+# ====================== LAYER 1 : UNIVERSAL RULES ======================
+# These rules apply to almost every packaged commodity
+
+description: Universal mandatory declarations applicable to most packaged commodities under Legal Metrology (Packaged Commodities) Rules, 2011
+
+mandatory_fields:
+  manufacturer:
+    severity: high
+    label: "Name and Address of Manufacturer / Packer / Importer"
+    description: "Must include complete name and address"
+
+  generic_name:
+    severity: high
+    label: "Common or Generic Name of the Commodity"
+    description: "Brand name alone is not sufficient"
+
+  net_quantity:
+    severity: high
+    label: "Net Quantity"
+    description: "Must be in standard unit (g, kg, ml, L, nos etc.)"
+
+  mrp:
+    severity: high
+    label: "Maximum Retail Price (inclusive of all taxes)"
+    description: "Must clearly state 'inclusive of all taxes'"
+
+  consumer_care:
+    severity: high
+    label: "Consumer Care Details"
+    description: "Must include email address (mandatory) and preferably phone number"
+
+format_checks:
+  - id: MRP_INCLUSIVE_TAXES
+    field: mrp
+    severity: high
+    message: "MRP must clearly indicate it is inclusive of all taxes"
+    suggestion: "Use format: MRP Rs. XX.XX (Inclusive of all taxes)"
+
+  - id: CONSUMER_CARE_EMAIL
+    field: consumer_care
+    severity: high
+    message: "Consumer care must contain a valid email address"
+    suggestion: "Email is mandatory under the Rules"
+
+  - id: NET_QUANTITY_FORMAT
+    field: net_quantity
+    severity: high
+    message: "Net quantity should be in standard format (value + unit)"
+    suggestion: "Example: 200 g, 500 ml, 1 L, 2 Nos"

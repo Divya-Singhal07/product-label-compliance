@@ -1,0 +1,23 @@
+product: biscuits
+category: food
+description: Product-specific rules for Biscuits / Cookies
+
+extra_mandatory:
+  []
+
+custom_checks:
+  - rule_id: RULE_BISCUITS_001
+    field: generic_name
+    severity: medium
+    message: "Should clearly indicate the product is Biscuits / Cookies"
+    suggestion: "Generic name should reflect that it is Biscuits / Cookies"
+  - rule_id: RULE_BISCUITS_002
+    field: net_quantity
+    severity: medium
+    message: "Net quantity should be appropriately declared for Biscuits / Cookies"
+    suggestion: "Use standard units (g, ml, L, Nos etc.)"
+
+notes:
+  - Product-specific rules for Biscuits / Cookies
+  - Category: food
+  - Additional FSSAI / BIS / D&C rules may also apply depending on product

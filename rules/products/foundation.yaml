@@ -1,0 +1,23 @@
+product: foundation
+category: cosmetics
+description: Product-specific rules for Foundation
+
+extra_mandatory:
+  []
+
+custom_checks:
+  - rule_id: RULE_FOUNDATION_001
+    field: generic_name
+    severity: medium
+    message: "Should clearly indicate the product is Foundation"
+    suggestion: "Generic name should reflect that it is Foundation"
+  - rule_id: RULE_FOUNDATION_002
+    field: net_quantity
+    severity: medium
+    message: "Net quantity should be appropriately declared for Foundation"
+    suggestion: "Use standard units (g, ml, L, Nos etc.)"
+
+notes:
+  - Product-specific rules for Foundation
+  - Category: cosmetics
+  - Additional FSSAI / BIS / D&C rules may also apply depending on product

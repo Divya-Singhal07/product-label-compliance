@@ -1,0 +1,23 @@
+product: body_lotion
+category: cosmetics
+description: Product-specific rules for Body Lotion
+
+extra_mandatory:
+  []
+
+custom_checks:
+  - rule_id: RULE_BODY_LOTION_001
+    field: generic_name
+    severity: medium
+    message: "Should clearly indicate the product is Body Lotion"
+    suggestion: "Generic name should reflect that it is Body Lotion"
+  - rule_id: RULE_BODY_LOTION_002
+    field: net_quantity
+    severity: medium
+    message: "Net quantity should be appropriately declared for Body Lotion"
+    suggestion: "Use standard units (g, ml, L, Nos etc.)"
+
+notes:
+  - Product-specific rules for Body Lotion
+  - Category: cosmetics
+  - Additional FSSAI / BIS / D&C rules may also apply depending on product

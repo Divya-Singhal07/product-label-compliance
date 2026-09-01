@@ -1,0 +1,23 @@
+product: conditioner
+category: cosmetics
+description: Product-specific rules for Conditioner
+
+extra_mandatory:
+  []
+
+custom_checks:
+  - rule_id: RULE_CONDITIONER_001
+    field: generic_name
+    severity: medium
+    message: "Should clearly indicate the product is Conditioner"
+    suggestion: "Generic name should reflect that it is Conditioner"
+  - rule_id: RULE_CONDITIONER_002
+    field: net_quantity
+    severity: medium
+    message: "Net quantity should be appropriately declared for Conditioner"
+    suggestion: "Use standard units (g, ml, L, Nos etc.)"
+
+notes:
+  - Product-specific rules for Conditioner
+  - Category: cosmetics
+  - Additional FSSAI / BIS / D&C rules may also apply depending on product
