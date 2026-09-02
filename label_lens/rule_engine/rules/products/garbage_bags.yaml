@@ -1,0 +1,23 @@
+product: garbage_bags
+category: general
+description: Product-specific rules for Garbage Bags
+
+extra_mandatory:
+  []
+
+custom_checks:
+  - rule_id: RULE_GARBAGE_BAGS_001
+    field: generic_name
+    severity: medium
+    message: "Should clearly indicate the product is Garbage Bags"
+    suggestion: "Generic name should reflect that it is Garbage Bags"
+  - rule_id: RULE_GARBAGE_BAGS_002
+    field: net_quantity
+    severity: medium
+    message: "Net quantity should be appropriately declared for Garbage Bags"
+    suggestion: "Use standard units (g, ml, L, Nos etc.)"
+
+notes:
+  - Product-specific rules for Garbage Bags
+  - Category: general
+  - Additional FSSAI / BIS / D&C rules may also apply depending on product

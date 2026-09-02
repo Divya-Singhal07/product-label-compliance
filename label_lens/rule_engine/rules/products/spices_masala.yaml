@@ -1,0 +1,23 @@
+product: spices_masala
+category: food
+description: Product-specific rules for Spices / Masala
+
+extra_mandatory:
+  []
+
+custom_checks:
+  - rule_id: RULE_SPICES_MASALA_001
+    field: generic_name
+    severity: medium
+    message: "Should clearly indicate the product is Spices / Masala"
+    suggestion: "Generic name should reflect that it is Spices / Masala"
+  - rule_id: RULE_SPICES_MASALA_002
+    field: net_quantity
+    severity: medium
+    message: "Net quantity should be appropriately declared for Spices / Masala"
+    suggestion: "Use standard units (g, ml, L, Nos etc.)"
+
+notes:
+  - Product-specific rules for Spices / Masala
+  - Category: food
+  - Additional FSSAI / BIS / D&C rules may also apply depending on product

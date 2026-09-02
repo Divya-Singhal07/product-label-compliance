@@ -1,0 +1,16 @@
+product: fruit_juices
+category: food
+
+description: >
+  Product-specific rules for packaged fruit juice products.
+
+extra_mandatory: []
+
+custom_checks: []
+
+notes:
+  - Product-specific rules for Fruit Juices
+  - Category: food
+  - Generic name should identify the food appropriately.
+  - Net quantity should use an appropriate declaration such as ml or L.
+  - Additional FSSAI requirements may apply depending on the product.

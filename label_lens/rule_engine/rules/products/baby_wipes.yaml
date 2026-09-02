@@ -1,0 +1,23 @@
+product: baby_wipes
+category: general
+description: Product-specific rules for Baby Wipes
+
+extra_mandatory:
+  []
+
+custom_checks:
+  - rule_id: RULE_BABY_WIPES_001
+    field: generic_name
+    severity: medium
+    message: "Should clearly indicate the product is Baby Wipes"
+    suggestion: "Generic name should reflect that it is Baby Wipes"
+  - rule_id: RULE_BABY_WIPES_002
+    field: net_quantity
+    severity: medium
+    message: "Net quantity should be appropriately declared for Baby Wipes"
+    suggestion: "Use standard units (g, ml, L, Nos etc.)"
+
+notes:
+  - Product-specific rules for Baby Wipes
+  - Category: general
+  - Additional FSSAI / BIS / D&C rules may also apply depending on product

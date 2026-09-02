@@ -1,0 +1,23 @@
+product: lipstick
+category: cosmetics
+description: Product-specific rules for Lipstick
+
+extra_mandatory:
+  []
+
+custom_checks:
+  - rule_id: RULE_LIPSTICK_001
+    field: generic_name
+    severity: medium
+    message: "Should clearly indicate the product is Lipstick"
+    suggestion: "Generic name should reflect that it is Lipstick"
+  - rule_id: RULE_LIPSTICK_002
+    field: net_quantity
+    severity: medium
+    message: "Net quantity should be appropriately declared for Lipstick"
+    suggestion: "Use standard units (g, ml, L, Nos etc.)"
+
+notes:
+  - Product-specific rules for Lipstick
+  - Category: cosmetics
+  - Additional FSSAI / BIS / D&C rules may also apply depending on product

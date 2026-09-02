@@ -1,0 +1,47 @@
+product_type: food
+
+description: >
+  Rules for packaged food products. Food labelling requirements may
+  also be governed by FSSAI in addition to Legal Metrology requirements.
+
+mandatory:
+  manufacturer:
+    severity: high
+    label: "Name and Address of Manufacturer / Packer / Importer"
+
+  generic_name:
+    severity: high
+    label: "Name of the Food"
+
+  net_quantity:
+    severity: high
+    label: "Net Quantity"
+
+  mrp:
+    severity: high
+    label: "Maximum Retail Price (inclusive of all taxes)"
+
+  consumer_care:
+    severity: high
+    label: "Consumer Care Details"
+
+exempted:
+  - mfg_date
+
+notes:
+  - >
+    Date marking should be evaluated using Best Before or Use By,
+    as applicable to the food product.
+  - >
+    Manufacturing date alone should not be treated as Best Before
+    or Use By.
+  - >
+    Prefer FSSAI requirements for ingredients, nutritional information,
+    vegetarian/non-vegetarian declaration, date marking and other
+    food-specific declarations.
+  - >
+    LMPC requirements continue to apply to applicable declarations
+    including MRP, net quantity and manufacturer/packer/importer details.
+  - >
+    Unit Sale Price may apply depending on the applicable packaged
+    commodity requirements and should be evaluated separately.

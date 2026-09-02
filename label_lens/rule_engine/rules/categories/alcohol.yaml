@@ -1,0 +1,23 @@
+product_type: alcohol
+description: Alcoholic beverages – State Excise laws may override certain price declarations.
+
+mandatory:
+  manufacturer:
+    severity: high
+    label: "Name and Address of Manufacturer / Bottler"
+  generic_name:
+    severity: high
+    label: "Type of Alcoholic Beverage"
+  net_quantity:
+    severity: high
+    label: "Net Quantity (volume)"
+  mrp:
+    severity: high
+    label: "Maximum Retail Price (as per State Excise rules)"
+
+exempted:
+  - unit_sale_price     # State Excise laws usually govern
+
+notes:
+  - Many labelling aspects (including price) are governed by respective State Excise laws.
+  - LMPC still applies for basic declarations where not overridden.

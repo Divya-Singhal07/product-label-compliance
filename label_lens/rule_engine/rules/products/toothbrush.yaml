@@ -1,0 +1,23 @@
+product: toothbrush
+category: cosmetics
+description: Product-specific rules for Toothbrush
+
+extra_mandatory:
+  []
+
+custom_checks:
+  - rule_id: RULE_TOOTHBRUSH_001
+    field: generic_name
+    severity: medium
+    message: "Should clearly indicate the product is Toothbrush"
+    suggestion: "Generic name should reflect that it is Toothbrush"
+  - rule_id: RULE_TOOTHBRUSH_002
+    field: net_quantity
+    severity: medium
+    message: "Net quantity should be appropriately declared for Toothbrush"
+    suggestion: "Use standard units (g, ml, L, Nos etc.)"
+
+notes:
+  - Product-specific rules for Toothbrush
+  - Category: cosmetics
+  - Additional FSSAI / BIS / D&C rules may also apply depending on product

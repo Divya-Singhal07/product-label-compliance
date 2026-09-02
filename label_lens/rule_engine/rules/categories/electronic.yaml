@@ -1,0 +1,26 @@
+product_type: electronic
+description: Special provisions for electronic products (QR code relaxation for some fields).
+
+mandatory:
+  manufacturer:
+    severity: high
+    label: "Name of Manufacturer / Packer / Importer (full address may be via QR)"
+  generic_name:
+    severity: medium
+    label: "Common / Generic Name (may be provided via QR code with instruction on package)"
+  net_quantity:
+    severity: high
+    label: "Net Quantity / Number of units"
+  mrp:
+    severity: high
+    label: "Maximum Retail Price (inclusive of all taxes)"
+  consumer_care:
+    severity: high
+    label: "Consumer Care Details"
+
+exempted: []
+
+notes:
+  - As per 2023 amendment, full address and generic name may be provided through QR code provided the package itself instructs the consumer to scan the QR code.
+  - Name of manufacturer/packer/importer must still appear on the physical package.
+  - Dimensions are generally NOT mandatory unless size is a principal metric of sale.

@@ -1,0 +1,26 @@
+product: baby_food
+category: food
+description: Product-specific rules for Baby Food
+
+extra_mandatory:
+  - field: best_before
+    severity: high
+    label: "Best Before / Use By date is critical"
+  - field: mfg_date
+    severity: high
+    label: "Manufacturing date is mandatory"
+
+custom_checks:
+  - rule_id: RULE_BABYFOOD_001
+    field: generic_name
+    severity: high
+    message: "Must clearly indicate it is Baby Food / Infant Food"
+  - rule_id: RULE_BABYFOOD_002
+    field: best_before
+    severity: high
+    message: "Best Before date is extremely important for baby food"
+
+notes:
+  - Product-specific rules for Baby Food
+  - Category: food
+  - Additional FSSAI / BIS / D&C rules may also apply depending on product

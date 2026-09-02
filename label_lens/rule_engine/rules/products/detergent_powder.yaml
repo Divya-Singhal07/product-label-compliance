@@ -1,0 +1,23 @@
+product: detergent_powder
+category: general
+description: Product-specific rules for Detergent Powder
+
+extra_mandatory:
+  []
+
+custom_checks:
+  - rule_id: RULE_DETERGENT_POWDER_001
+    field: generic_name
+    severity: medium
+    message: "Should clearly indicate the product is Detergent Powder"
+    suggestion: "Generic name should reflect that it is Detergent Powder"
+  - rule_id: RULE_DETERGENT_POWDER_002
+    field: net_quantity
+    severity: medium
+    message: "Net quantity should be appropriately declared for Detergent Powder"
+    suggestion: "Use standard units (g, ml, L, Nos etc.)"
+
+notes:
+  - Product-specific rules for Detergent Powder
+  - Category: general
+  - Additional FSSAI / BIS / D&C rules may also apply depending on product

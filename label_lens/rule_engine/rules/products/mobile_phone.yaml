@@ -1,0 +1,34 @@
+product: mobile_phone
+category: electronic
+description: Product-specific rules for Mobile Phones / Smartphones
+
+extra_mandatory: []
+
+custom_checks:
+  - rule_id: RULE_MOBILE_001
+    field: generic_name
+    severity: medium
+    message: "Should clearly mention Mobile Phone / Smartphone + Model name"
+    suggestion: "Example: Smartphone Model XYZ"
+
+  - rule_id: RULE_MOBILE_002
+    field: net_quantity
+    severity: medium
+    message: "Usually declared as 1 Nos / 1 Unit"
+    suggestion: "Net Qty: 1 Nos"
+
+  - rule_id: RULE_MOBILE_003
+    field: manufacturer
+    severity: medium
+    message: "Importer details are critical if the phone is imported"
+    suggestion: "Full importer name and address required for imported phones"
+
+  - rule_id: RULE_MOBILE_004
+    field: country_of_origin
+    severity: high
+    message: "Country of Origin is mandatory for imported mobile phones"
+    suggestion: "Declare Country of Origin clearly"
+
+notes:
+  - Electronic products have QR code relaxation for some fields (address / generic name).
+  - Screen size is generally NOT required as a mandatory LMPC declaration.
