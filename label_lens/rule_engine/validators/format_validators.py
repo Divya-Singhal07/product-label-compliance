@@ -21,7 +21,7 @@ def check_mrp_format(data: ExtractedFields) -> List[Violation]:
     mrp_norm = normalize_text(mrp)
 
     # 1. Must indicate inclusive of all taxes
-    if not has_inclusive_of_taxes(mrp):
+    if not data.mrp_inclusive_of_taxes and not has_inclusive_of_taxes(mrp):
         violations.append(
             Violation(
                 rule_id="MRP_001",
@@ -177,16 +177,32 @@ def check_date_format(data: ExtractedFields) -> List[Violation]:
         # ========================================================
 
         shelf_life_pattern = re.compile(
-            r"\b\d+\s*"
-            r"(month|months|year|years|day|days)\b"
-            r".*"
-            r"\b("
-            r"mfd|"
-            r"manufactur(?:e|ed|ing)|"
-            r"pack(?:ed|ing)?|"
-            r"packing|"
-            r"import(?:ed|ing)?"
-            r")\b",
+            r"(?:"
+            r"\d+|"
+            r"one|two|three|four|five|six|seven|eight|nine|ten|"
+            r"eleven|twelve|thirteen|fourteen|fifteen|sixteen|"
+            r"seventeen|eighteen|nineteen|"
+            r"twenty(?:[\s-]+one|[\s-]+two|[\s-]+three|[\s-]+four|"
+            r"[\s-]+five|[\s-]+six|[\s-]+seven|[\s-]+eight|[\s-]+nine)?|"
+            r"thirty(?:[\s-]+one|[\s-]+two|[\s-]+three|[\s-]+four|"
+            r"[\s-]+five|[\s-]+six|[\s-]+seven|[\s-]+eight|[\s-]+nine)?|"
+            r"forty(?:[\s-]+one|[\s-]+two|[\s-]+three|[\s-]+four|"
+            r"[\s-]+five|[\s-]+six|[\s-]+seven|[\s-]+eight|[\s-]+nine)?|"
+            r"fifty(?:[\s-]+one|[\s-]+two|[\s-]+three|[\s-]+four|"
+            r"[\s-]+five|[\s-]+six|[\s-]+seven|[\s-]+eight|[\s-]+nine)?|"
+            r"sixty(?:[\s-]+one|[\s-]+two|[\s-]+three|[\s-]+four|"
+            r"[\s-]+five|[\s-]+six|[\s-]+seven|[\s-]+eight|[\s-]+nine)?|"
+            r"seventy(?:[\s-]+one|[\s-]+two|[\s-]+three|[\s-]+four|"
+            r"[\s-]+five|[\s-]+six|[\s-]+seven|[\s-]+eight|[\s-]+nine)?|"
+            r"eighty(?:[\s-]+one|[\s-]+two|[\s-]+three|[\s-]+four|"
+            r"[\s-]+five|[\s-]+six|[\s-]+seven|[\s-]+eight|[\s-]+nine)?|"
+            r"ninety(?:[\s-]+one|[\s-]+two|[\s-]+three|[\s-]+four|"
+            r"[\s-]+five|[\s-]+six|[\s-]+seven|[\s-]+eight|[\s-]+nine)?"
+            r")\s+"
+            r"(?:month|months|year|years|day|days)\b"
+            r".*?"
+            r"\b(?:mfd|mfg|manufactur(?:e|ed|ing)|pack(?:ed|ing)?|packing|"
+            r"import(?:ed|ing)?)\b",
             re.IGNORECASE,
         )
 

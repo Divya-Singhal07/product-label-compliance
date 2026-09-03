@@ -18,6 +18,7 @@ class ExtractedFields(BaseModel):
     generic_name: Optional[str] = None
     net_quantity: Optional[str] = None
     mrp: Optional[str] = None
+    mrp_inclusive_of_taxes: bool = False
     mrp_declaration_detected: bool = False
     unit_sale_price: Optional[str] = None
     mfg_date: Optional[str] = None
