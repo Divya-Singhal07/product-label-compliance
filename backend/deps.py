@@ -13,19 +13,32 @@ from dotenv import load_dotenv
 from fastapi import HTTPException, Request, status
 from supabase import Client, create_client
 
-load_dotenv(Path(__file__).resolve().parent / ".env")
+ENV_FILE = Path(__file__).resolve().parent / ".env"
 
-SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
-SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "")
+
+def _load_runtime_config() -> None:
+    """Refresh local configuration without logging sensitive values.
+
+    This lets a long-running development server use values added to
+    ``backend/.env`` after it was started. The values remain process-local and
+    are never returned by the API.
+    """
+    load_dotenv(ENV_FILE, override=True)
+
+
+_load_runtime_config()
 
 ACCESS_COOKIE = "sb_access_token"
 REFRESH_COOKIE = "sb_refresh_token"
 
 
 def supabase_client() -> Client:
-    if not SUPABASE_URL or not SUPABASE_KEY:
+    _load_runtime_config()
+    supabase_url = os.environ.get("SUPABASE_URL", "")
+    supabase_key = os.environ.get("SUPABASE_KEY", "")
+    if not supabase_url or not supabase_key:
         raise RuntimeError("Set SUPABASE_URL and SUPABASE_KEY in backend/.env")
-    return create_client(SUPABASE_URL, SUPABASE_KEY)
+    return create_client(supabase_url, supabase_key)
 
 
 def get_current_user(request: Request):

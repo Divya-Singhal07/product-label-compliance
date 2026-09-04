@@ -40,7 +40,8 @@ async function pollForResult(job_id: string): Promise<AnalyzeResponse> {
     const statusRes = await fetch(`${API_BASE}/jobs/${job_id}`, {
       credentials: 'include',
     })
-    const { status } = await statusRes.json()
+    const statusPayload = await statusRes.json()
+    const { status } = statusPayload
 
     if (status === 'completed') {
       const resultRes = await fetch(`${API_BASE}/jobs/${job_id}/result`, {
@@ -49,7 +50,9 @@ async function pollForResult(job_id: string): Promise<AnalyzeResponse> {
       return (await resultRes.json()) as AnalyzeResponse
     }
 
-    if (status === 'failed') throw new Error('Analysis failed')
+    if (status === 'failed') {
+      throw new Error(statusPayload.error ?? 'Analysis failed')
+    }
   }
   throw new Error('Analysis timed out')
 }
@@ -84,4 +87,3 @@ export async function getPastRecords(): Promise<InspectionRecord[]> {
     return []
   }
 }
-

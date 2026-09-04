@@ -38,6 +38,8 @@ for _mod in [
     "label_lens.preprocessing.pipeline",
     "label_lens.ocr",
     "label_lens.ocr.ocr_pipeline",
+    "label_lens.ocr.llm_extractor",
+    "label_lens.ocr.product_id",
     "label_lens.rule_engine",
     "label_lens.rule_engine.engine",
     "label_lens.rule_engine_mapper",
@@ -48,6 +50,8 @@ for _mod in [
 # Provide minimal callables so the import of ocr_routes succeeds
 sys.modules["label_lens.preprocessing.pipeline"].PackageImagePreprocessor = MagicMock()
 sys.modules["label_lens.ocr.ocr_pipeline"].OCRProcessor = MagicMock()
+sys.modules["label_lens.ocr.llm_extractor"].extract_fields_with_llm = MagicMock()
+sys.modules["label_lens.ocr.product_id"].generate_product_id = MagicMock()
 sys.modules["label_lens.rule_engine_mapper"].map_to_rule_engine = MagicMock()
 sys.modules["label_lens.rule_engine.engine"].run_compliance_check = MagicMock()
 
@@ -181,6 +185,15 @@ class TestOCRRoutes:
         r = client.get("/api/v1/ocr/jobs/nonexistent-id")
         assert r.status_code == 404
 
+    def test_runtime_status_does_not_expose_configuration_values(self):
+        user = _make_supabase_user()
+        app.dependency_overrides[_deps_module.get_current_user] = _ocr_auth_override(user)
+        r = client.get("/api/v1/ocr/runtime")
+        assert r.status_code == 200
+        data = r.json()
+        assert data["backend_revision"] == "llm-required-v1"
+        assert "GROQ_API_KEY" not in str(data)
+
     def test_get_job_result_not_found_returns_404(self):
         user = _make_supabase_user()
         app.dependency_overrides[_deps_module.get_current_user] = _ocr_auth_override(user)
@@ -228,6 +241,100 @@ class TestOCRRoutes:
         assert data["job_id"] == "good-job"
         assert data["status"] == "queued"
         _JOBS.pop("good-job", None)
+
+    def test_get_failed_job_status_includes_error(self):
+        from ocr_routes import _JOBS
+        user = _make_supabase_user(uid="uid-abc")
+        app.dependency_overrides[_deps_module.get_current_user] = _ocr_auth_override(user)
+        _JOBS["failed-job"] = {
+            "status": "failed",
+            "owner": "uid-abc",
+            "created_at": "2026-01-01T00:00:00Z",
+            "error": "OCR service unavailable",
+        }
+        r = client.get("/api/v1/ocr/jobs/failed-job")
+        assert r.status_code == 200
+        assert r.json()["error"] == "OCR service unavailable"
+        _JOBS.pop("failed-job", None)
+
+    def test_backend_retries_silent_empty_llm_output(self):
+        from ocr_routes import _require_llm_extraction
+
+        ocr = MagicMock()
+        ocr._merge_fields.return_value = {
+            "brand": "Fallback Brand",
+            "product_name": None,
+            "net_quantity": "500 g",
+        }
+        final = {
+            "product_id": "old-id",
+            "views": {
+                "front": {
+                    "extraction_method": "llm",
+                    "ocr_lines": [{"text": "Fallback Brand 500 g"}],
+                    "fields": {"brand": None, "net_quantity": None},
+                }
+            },
+            "merged_fields": {"brand": None},
+        }
+
+        with patch(
+            "ocr_routes.extract_fields_with_llm",
+            return_value={"brand": "Fallback Brand", "net_quantity": "500 g"},
+        ), patch("ocr_routes.generate_product_id", return_value="fallback-brand-500-g"):
+            affected = _require_llm_extraction(ocr, final)
+
+        assert affected == ["front"]
+        assert final["views"]["front"]["extraction_method"] == "llm_retry"
+        assert final["merged_fields"]["brand"] == "Fallback Brand"
+        assert final["product_id"] == "fallback-brand-500-g"
+
+    def test_backend_does_not_retry_valid_llm_fields(self):
+        from ocr_routes import _require_llm_extraction
+
+        ocr = MagicMock()
+        final = {
+            "views": {
+                "front": {
+                    "extraction_method": "llm",
+                    "ocr_lines": [{"text": "Valid Brand"}],
+                    "fields": {"brand": "Valid Brand"},
+                }
+            }
+        }
+
+        assert _require_llm_extraction(ocr, final) == []
+        ocr._merge_fields.assert_not_called()
+
+    def test_backend_rejects_empty_llm_retry(self):
+        from ocr_routes import _require_llm_extraction
+
+        final = {
+            "views": {
+                "front": {
+                    "extraction_method": "rules",
+                    "ocr_lines": [{"text": "Visible label text"}],
+                    "fields": {"brand": None},
+                }
+            }
+        }
+        with patch("ocr_routes.extract_fields_with_llm", return_value={"brand": None}):
+            with pytest.raises(RuntimeError, match="No compliance score"):
+                _require_llm_extraction(MagicMock(), final)
+
+    def test_backend_rejects_empty_ocr_before_rule_engine_runs(self):
+        from ocr_routes import _require_usable_ocr
+
+        final = {
+            "views": {
+                "front": {"error": "OCR model was unavailable"},
+                "back": {"ocr_lines": []},
+            },
+            "merged_fields": {"brand": None},
+        }
+
+        with pytest.raises(RuntimeError, match="OCR could not read text"):
+            _require_usable_ocr(final)
 
     def test_get_past_records_authenticated(self):
         user = _make_supabase_user(uid="uid-abc", email="officer@test.gov.in")
@@ -424,4 +531,3 @@ class TestJsonAuthApi:
             r = client.post("/api/forgot-password", json={"officer_id": "OFC-001"})
         assert r.status_code == 500
         assert "Rate limit" in r.json()["error"]
-
