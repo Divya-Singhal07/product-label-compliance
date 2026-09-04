@@ -1,4 +1,4 @@
-export type AppMode = 'landing' | 'workspace'
+export type AppMode = 'landing' | 'workspace' | 'auth'
 
 export type WorkspaceView = 'scan' | 'result'
 

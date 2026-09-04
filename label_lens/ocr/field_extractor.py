@@ -94,6 +94,50 @@ def _normalize_quantity(value: str) -> str:
     return value
 
 
+def _extract_net_quantity(text: str) -> str | None:
+    """
+    Extract net quantity from product label text.
+
+    Supports formats like:
+        Net Quantity: 500 g
+        Net Qty: 250 ml
+        Net Wt: 1 kg
+        Net Weight: 100g
+        Net Vol: 750 ml
+        Net Content: 10 Units
+        Net: 500 g
+    """
+    if not text:
+        return None
+
+    normalized = re.sub(r"\s+", " ", text).strip()
+
+    patterns = [
+        # Explicit label prefix like 'Net Quantity: 500 g', 'Net Wt.: 1 kg'
+        r"\b(?:NET\s*(?:QUANTITY|QTY|CONTENT|CONTENTS|WT\.?|WEIGHT|VOL\.?|VOLUME)|QUANTITY|QTY)\b"
+        r"\s*[:\-]?\s*"
+        r"(\d+(?:\.\d+)?\s*(?:kg|kgs|kilograms?|g|gm|gms|grams?|ml|millilitres?|milliliters?|l|ltr|litres?|liters?|cm|m|nos|no\.?|pieces?|pcs|units?|u|n))\b",
+
+        # 'Net' alone preceding quantity: 'Net: 500 g'
+        r"\bNET\b\s*[:\-]?\s*(\d+(?:\.\d+)?\s*(?:kg|kgs|kilograms?|g|gm|gms|grams?|ml|millilitres?|milliliters?|l|ltr|litres?|liters?|nos|pieces?|pcs|units?))\b",
+
+        # Value with clear multi-character unit even if 'Net' keyword is separate or omitted
+        r"\b(\d+(?:\.\d+)?\s*(?:kg|kgs|kilograms?|gm|gms|grams?|millilitres?|milliliters?|litres?|liters?))\b",
+
+        # Value with standard short unit (g, ml, L)
+        r"\b(\d+(?:\.\d+)?\s*(?:g|kg|ml|l))\b",
+    ]
+
+    for pattern in patterns:
+        match = re.search(pattern, normalized, re.IGNORECASE)
+        if match:
+            value = match.group(1)
+            if value:
+                return _normalize_quantity(value)
+
+    return None
+
+
 def _extract_mrp(text: str) -> str | None:
     """
     Extract MRP from common Indian packaged-product declarations.

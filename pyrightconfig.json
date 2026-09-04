@@ -1,0 +1,22 @@
+{
+  "pythonVersion": "3.12",
+  "pythonPlatform": "Darwin",
+  "venvPath": "backend",
+  "venv": ".venv",
+  "extraPaths": [
+    "backend",
+    "."
+  ],
+  "include": [
+    "backend",
+    "label_lens"
+  ],
+  "exclude": [
+    "backend/.venv",
+    "**/__pycache__",
+    "backend/ocr_uploads"
+  ],
+  "typeCheckingMode": "basic",
+  "reportMissingModuleSource": "none",
+  "reportMissingImports": "none"
+}

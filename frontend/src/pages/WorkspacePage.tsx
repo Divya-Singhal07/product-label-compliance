@@ -1,5 +1,7 @@
+import { AccountMenu } from '../components/auth/AccountMenu'
 import { UploadSlot } from '../components/workspace/UploadSlot'
 import type { LabelView } from '../types/app'
+import type { User } from '../types/auth'
 import type { ComplianceResult, MergedFields, Violation } from '../types/compliance'
 
 const SLOTS: { view: LabelView; title: string }[] = [
@@ -21,6 +23,7 @@ const FIELD_LABELS: { key: keyof MergedFields; label: string }[] = [
 ]
 
 interface WorkspacePageProps {
+  user: User | null
   view: 'scan' | 'result'
   files: Partial<Record<LabelView, File>>
   previewUrls: Partial<Record<LabelView, string>>
@@ -32,9 +35,11 @@ interface WorkspacePageProps {
   onAnalyze: () => void
   onBackHome: () => void
   onOpenScan: () => void
+  onLogout: () => void
 }
 
 export function WorkspacePage({
+  user,
   view,
   files,
   previewUrls,
@@ -46,6 +51,7 @@ export function WorkspacePage({
   onAnalyze,
   onBackHome,
   onOpenScan,
+  onLogout,
 }: WorkspacePageProps) {
   const hasImage = Boolean(files.front || files.back || files.side)
   const violations: Violation[] = result?.violations ?? []
@@ -60,14 +66,15 @@ export function WorkspacePage({
         <button type="button" className="text-btn" onClick={onBackHome}>
           ← Home
         </button>
+        {user && <AccountMenu user={user} onLogout={onLogout} />}
       </header>
 
       {view === 'scan' ? (
         <section className="work-scan">
           <h1>Scan a product</h1>
           <p className="work-lede">
-            Front, back and optional side. Analysis will use the backend pipeline
-            when the HTTP API is available — this screen does not run OCR.
+            Upload front, back and optional side images. The backend will run
+            OCR extraction and compliance checking automatically.
           </p>
           <div className="drop-grid">
             {SLOTS.map((slot) => (
@@ -85,10 +92,10 @@ export function WorkspacePage({
           <div className="work-process">
             {isProcessing ? (
               <p className="processing" role="status">
-                Staging images… the rule engine is not called from this UI yet.
+                Analyzing… running OCR and compliance checks.
               </p>
             ) : (
-              <p>Idle. No network request is sent.</p>
+              <p>Ready to analyze.</p>
             )}
           </div>
           <button
@@ -126,8 +133,7 @@ export function WorkspacePage({
             </p>
           </div>
           <p className="work-lede">
-            {result?.summary ??
-              'Score, fields, violations and the report will fill in from ComplianceResult once the API exists.'}
+            {result?.summary ?? 'No compliance summary available.'}
           </p>
           {result?.needs_manual_review ? (
             <p className="caution-line">Manual review required</p>

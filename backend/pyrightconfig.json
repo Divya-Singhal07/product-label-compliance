@@ -1,0 +1,21 @@
+{
+  "pythonVersion": "3.12",
+  "pythonPlatform": "Darwin",
+  "venvPath": ".",
+  "venv": ".venv",
+  "extraPaths": [
+    ".",
+    "../label_lens/.."
+  ],
+  "include": [
+    "."
+  ],
+  "exclude": [
+    ".venv",
+    "__pycache__",
+    "ocr_uploads", "**/node_modules", "**/.*"
+  ],
+  "typeCheckingMode": "basic",
+  "reportMissingModuleSource": "none",
+  "reportMissingImports": "none"
+}

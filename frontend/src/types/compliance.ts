@@ -66,11 +66,14 @@ export interface ComplianceResult {
   layers_applied: string[]
 }
 
-/** Combined payload the frontend expects once an HTTP API exists. */
+/** Combined payload returned by the backend OCR job result endpoint. */
 export interface AnalyzeResponse {
   product_id: string
+  product_folder: string
   merged_fields: MergedFields
-  compliance: ComplianceResult
+  compliance_result: ComplianceResult | null
+  views: Record<string, unknown>
+  metadata: Record<string, unknown>
 }
 
 /** Local UI helper for scan-history rows. Not a backend model. */

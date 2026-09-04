@@ -16,7 +16,7 @@ import logging
 import sys
 from pathlib import Path
 
-from preprocessing.pipeline import PackageImagePreprocessor
+from label_lens.preprocessing.pipeline import PackageImagePreprocessor
 
 
 def setup_logging(verbose: bool = True) -> None:
