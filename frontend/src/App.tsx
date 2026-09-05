@@ -88,7 +88,7 @@ function App() {
       setWorkspaceView('result')
     } catch (error) {
       console.error('Analysis failed', error)
-      alert('Failed to analyze product. Please try again.')
+      alert(error instanceof Error ? error.message : 'Failed to analyze product. Please try again.')
     } finally {
       setIsProcessing(false)
     }

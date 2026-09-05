@@ -25,9 +25,6 @@ export async function analyzeProduct(input: AnalyzeProductInput): Promise<Analyz
     body: formData,
   })
 
-  if (response.status === 401) {
-    throw new Error('Session expired. Please log in again and retry analysis.')
-  }
   if (!response.ok) throw new Error('Failed to start analysis')
   const { job_id } = await response.json()
 
@@ -36,31 +33,13 @@ export async function analyzeProduct(input: AnalyzeProductInput): Promise<Analyz
 }
 
 async function pollForResult(job_id: string): Promise<AnalyzeResponse> {
-  // OCR + LLM routinely takes 1–3 minutes (Paddle model load on first run).
-  const maxAttempts = 90
-  const delayMs = 2500
-  let unauthorizedStreak = 0
-
+  const maxAttempts = 20
   for (let i = 0; i < maxAttempts; i++) {
-    await new Promise((resolve) => setTimeout(resolve, delayMs))
+    await new Promise((resolve) => setTimeout(resolve, 2000)) // 2s delay
 
     const statusRes = await fetch(`${API_BASE}/jobs/${job_id}`, {
       credentials: 'include',
     })
-
-    if (statusRes.status === 401) {
-      unauthorizedStreak += 1
-      if (unauthorizedStreak >= 3) {
-        throw new Error('Session expired. Please log in again and retry analysis.')
-      }
-      continue
-    }
-    unauthorizedStreak = 0
-
-    if (!statusRes.ok) {
-      continue
-    }
-
     const statusPayload = await statusRes.json()
     const { status } = statusPayload
 
@@ -68,9 +47,6 @@ async function pollForResult(job_id: string): Promise<AnalyzeResponse> {
       const resultRes = await fetch(`${API_BASE}/jobs/${job_id}/result`, {
         credentials: 'include',
       })
-      if (!resultRes.ok) {
-        throw new Error('Analysis finished but the result could not be loaded.')
-      }
       return (await resultRes.json()) as AnalyzeResponse
     }
 
@@ -78,9 +54,7 @@ async function pollForResult(job_id: string): Promise<AnalyzeResponse> {
       throw new Error(statusPayload.error ?? 'Analysis failed')
     }
   }
-  throw new Error(
-    'Analysis is taking longer than expected. OCR can take a few minutes on the first scan — please wait a moment and try again.',
-  )
+  throw new Error('Analysis timed out')
 }
 
 export interface InspectionRecord {

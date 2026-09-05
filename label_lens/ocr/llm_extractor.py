@@ -1,5 +1,8 @@
 """
 LLM-based field extractor – upgraded for Rule Engine compatibility.
+
+Failures (API errors, empty content, invalid JSON) raise LLMExtractionError
+so callers never treat an empty schema as a successful extraction.
 """
 
 from __future__ import annotations
@@ -20,6 +23,26 @@ try:
     GROQ_AVAILABLE = True
 except ImportError:
     GROQ_AVAILABLE = False
+
+
+class LLMExtractionError(RuntimeError):
+    """Raised when Groq extraction fails or returns unusable content."""
+
+
+# llama-3.3-70b-versatile was shut down for Groq free/dev on 2026-08-16.
+# Override with GROQ_MODEL. If that id 404s, we try FALLBACK_GROQ_MODELS.
+DEFAULT_GROQ_MODEL = "qwen/qwen3.6-27b"
+FALLBACK_GROQ_MODELS = (
+    "qwen/qwen3.6-27b",
+    "openai/gpt-oss-120b",
+    "openai/gpt-oss-20b",
+)
+REASONING_MODELS = frozenset({
+    "openai/gpt-oss-20b",
+    "openai/gpt-oss-120b",
+    "qwen/qwen3.6-27b",
+    "qwen/qwen3.8-27b",
+})
 
 
 SYSTEM_PROMPT = """You are an expert Indian packaged-commodity label analyst specializing in
@@ -144,7 +167,8 @@ EXTRACTION RULES:
 
 15. PRODUCT CLASSIFICATION
 - product_type MUST be exactly one of:
-  "food", "cosmetic", "electronic", "general".
+  "food", "cosmetics", "electronic", "general".
+  Use the plural "cosmetics" (not "cosmetic") so it matches rule YAML keys.
 - specific_product should be lowercase with underscores.
 - Examples:
   "fruit_juices", "biscuits", "honey", "shampoo", "toothpaste".
@@ -175,6 +199,50 @@ EXTRACTION RULES:
   interpretation of it.
 - Return ONLY JSON.
 """
+
+
+def _is_reasoning_model(model: str) -> bool:
+    name = (model or "").lower()
+    return (
+        model in REASONING_MODELS
+        or name.startswith("openai/gpt-oss")
+        or "qwen3" in name
+    )
+
+
+def _parse_json_content(content: str) -> Dict[str, Any]:
+    text = (content or "").strip()
+    if not text:
+        raise LLMExtractionError("LLM returned empty content")
+    text = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL | re.IGNORECASE).strip()
+    try:
+        parsed = json.loads(text)
+    except json.JSONDecodeError as e:
+        match = re.search(r"\{.*\}", text, re.DOTALL)
+        if not match:
+            raise LLMExtractionError(f"LLM returned non-JSON content: {e}") from e
+        try:
+            parsed = json.loads(match.group(0))
+        except Exception as parse_exc:
+            raise LLMExtractionError(
+                f"LLM returned invalid JSON that could not be recovered: {parse_exc}"
+            ) from parse_exc
+    if not isinstance(parsed, dict):
+        raise LLMExtractionError("LLM response JSON was not an object")
+    return parsed
+
+
+def _message_text(response: Any) -> str:
+    message = response.choices[0].message
+    content = getattr(message, "content", None)
+    if content and str(content).strip():
+        return str(content)
+    # Reasoning models sometimes put the answer in extra fields.
+    for attr in ("reasoning", "reasoning_content"):
+        extra = getattr(message, attr, None)
+        if extra and str(extra).strip():
+            return str(extra)
+    return ""
 
 
 def extract_fields_with_llm(
@@ -217,44 +285,94 @@ def extract_fields_with_llm(
     }
 
     if not ocr_text.strip():
+        # No OCR text is not an LLM failure; return empty schema.
         return empty_result
 
-    try:
-        client = Groq(api_key=api_key)
+    preferred = os.getenv("GROQ_MODEL", DEFAULT_GROQ_MODEL).strip() or DEFAULT_GROQ_MODEL
+    models_to_try: List[str] = []
+    for candidate in (preferred, *FALLBACK_GROQ_MODELS):
+        if candidate and candidate not in models_to_try:
+            models_to_try.append(candidate)
 
-        response = client.chat.completions.create(
-            model="openai/gpt-oss-20b",
-            messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": f"OCR Text from product label:\n\n{ocr_text}"},
-            ],
-            temperature=0.1,
-            max_tokens=2500,                    # ← increased
-            response_format={"type": "json_object"},
-        )
+    client = Groq(api_key=api_key, timeout=90.0)
+    last_error: Optional[Exception] = None
+    fields: Optional[Dict[str, Any]] = None
 
-        content = response.choices[0].message.content
+    for model in models_to_try:
+        is_reasoning = _is_reasoning_model(model)
+        token_kwargs: Dict[str, Any] = {}
+        if is_reasoning:
+            token_kwargs["max_completion_tokens"] = int(
+                os.getenv("GROQ_MAX_COMPLETION_TOKENS", "8000")
+            )
+        else:
+            token_kwargs["max_tokens"] = int(os.getenv("GROQ_MAX_TOKENS", "2500"))
 
-        if not content or not content.strip():
-            logger.warning("LLM returned empty content")
-            return empty_result
+        # Reasoning models often fail Groq json_object validation (empty
+        # failed_generation). Try strict JSON first, then plain text.
+        format_modes: List[Optional[Dict[str, str]]] = [
+            {"type": "json_object"},
+            None,
+        ]
 
-        try:
-            fields = json.loads(content)
-        except json.JSONDecodeError as e:
-            logger.error("JSON Decode Error: %s | Raw: %s", e, content[:500])
-            match = re.search(r"\{.*\}", content, re.DOTALL)
-            if match:
-                try:
-                    fields = json.loads(match.group(0))
-                except Exception:
-                    return empty_result
-            else:
-                return empty_result
+        for response_format in format_modes:
+            create_kwargs: Dict[str, Any] = {
+                "model": model,
+                "messages": [
+                    {"role": "system", "content": SYSTEM_PROMPT},
+                    {
+                        "role": "user",
+                        "content": f"OCR Text from product label:\n\n{ocr_text}",
+                    },
+                ],
+                "temperature": 0.1,
+                **token_kwargs,
+            }
+            if response_format is not None:
+                create_kwargs["response_format"] = response_format
 
-    except Exception as e:
-        logger.error("LLM extraction failed: %s", e)
-        return empty_result
+            try:
+                response = client.chat.completions.create(**create_kwargs)
+                parsed = _parse_json_content(_message_text(response))
+                fields = parsed
+                if model != preferred or response_format is None:
+                    logger.info(
+                        "LLM extraction succeeded with model=%s json_mode=%s",
+                        model,
+                        response_format is not None,
+                    )
+                break
+            except LLMExtractionError as e:
+                last_error = e
+                logger.warning("LLM parse failed (model=%s): %s", model, e)
+                continue
+            except Exception as e:
+                last_error = e
+                err_text = str(e)
+                if "model_not_found" in err_text or "does not exist" in err_text:
+                    logger.warning("Groq model %s not available: %s", model, e)
+                    break
+                if "json_validate_failed" in err_text or "Failed to validate JSON" in err_text:
+                    logger.warning(
+                        "Groq json_object rejected for %s; retrying without JSON mode",
+                        model,
+                    )
+                    continue
+                logger.error("LLM extraction failed: %s", e)
+                continue
+        if fields is not None:
+            break
+    else:
+        raise LLMExtractionError(
+            f"LLM extraction failed: {last_error}. "
+            "Set GROQ_MODEL in backend/.env to a model your Groq key can access "
+            "(see https://console.groq.com/docs/models)."
+        ) from last_error
+
+    if fields is None:
+        raise LLMExtractionError(
+            f"LLM extraction failed: {last_error}."
+        ) from last_error
 
     # Ensure all keys exist
     for k, v in empty_result.items():
