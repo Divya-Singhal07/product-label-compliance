@@ -1,6 +1,5 @@
 """
-PaddleOCR wrapper with rotation-aware OCR.
-SPEED OPTIMIZED VERSION
+PaddleOCR wrapper – Balanced version (Speed + Reliability)
 """
 
 from __future__ import annotations
@@ -17,7 +16,7 @@ logger = logging.getLogger(__name__)
 _ocr_engine = None
 
 
-def get_ocr_engine(lang: str = "en", use_angle_cls: bool = True):
+def get_ocr_engine(lang: str = "en"):
     global _ocr_engine
 
     if _ocr_engine is None:
@@ -25,31 +24,30 @@ def get_ocr_engine(lang: str = "en", use_angle_cls: bool = True):
             from paddleocr import PaddleOCR
 
             try:
+                # Try newer style first
                 _ocr_engine = PaddleOCR(
                     lang=lang,
-                    use_doc_orientation_classify=False,  # faster
-                    use_doc_unwarping=False,
-                    use_textline_orientation=False,      # faster
+                    use_angle_cls=True,
+                    show_log=False,
                 )
-            except Exception:
-                _ocr_engine = PaddleOCR(lang=lang)
+            except TypeError:
+                # Fallback for different PaddleOCR versions
+                try:
+                    _ocr_engine = PaddleOCR(lang=lang, use_angle_cls=True)
+                except Exception:
+                    _ocr_engine = PaddleOCR(lang=lang)
 
-            logger.info("PaddleOCR engine initialized (speed mode)")
+            logger.info("PaddleOCR engine initialized successfully")
 
         except ImportError as e:
             raise ImportError(
-                "PaddleOCR is not installed. Run: "
-                "pip install paddlepaddle paddleocr"
+                "PaddleOCR is not installed. Run: pip install paddlepaddle paddleocr"
             ) from e
 
     return _ocr_engine
 
 
-def _run_single_orientation(
-    image: np.ndarray,
-    engine,
-) -> List[Dict[str, Any]]:
-
+def _run_single_orientation(image: np.ndarray, engine) -> List[Dict[str, Any]]:
     result = engine.ocr(image)
 
     if not result:
@@ -58,7 +56,7 @@ def _run_single_orientation(
     lines: List[Dict[str, Any]] = []
     first = result[0]
 
-    # New PP-OCRv6 / PaddleX format
+    # New format (PP-OCRv6 / PaddleX)
     if hasattr(first, "get") or isinstance(first, dict):
         try:
             texts = first.get("rec_texts") or first.get("texts") or []
@@ -141,27 +139,22 @@ def _looks_like_important_declaration(text: str) -> bool:
         "mrp", "maximum retail", "retail price", "incl", "inclusive",
         "unit sale", "batch", "mfd", "mfg", "manufact", "expiry", "exp",
         "best before", "use by", "net wt", "net weight", "quantity",
-        "rs", "inr", "₹",
+        "rs", "inr", "₹", "disinfectant", "toilet",
     ]
     return any(k in t for k in keywords)
 
 
-def run_ocr_on_image(
-    image: np.ndarray,
-    engine=None,
-) -> List[Dict[str, Any]]:
-    """
-    SPEED OPTIMIZED: Only normal orientation (0°) by default.
-    """
+def run_ocr_on_image(image: np.ndarray, engine=None) -> List[Dict[str, Any]]:
     if engine is None:
         engine = get_ocr_engine()
 
     if image is None or image.size == 0:
         return []
 
-    # SPEED: Only 0° rotation (biggest speed gain)
+    # Balanced: normal + one rotation (good speed + better accuracy)
     orientations = [
         ("0deg", image),
+        ("90deg", cv2.rotate(image, cv2.ROTATE_90_CLOCKWISE)),
     ]
 
     all_lines: List[Dict[str, Any]] = []
@@ -187,7 +180,7 @@ def run_ocr_on_image(
         reverse=True,
     )
 
-    logger.info("Rotation-aware OCR → %d unique lines", len(merged))
+    logger.info("Final OCR → %d unique lines", len(merged))
     return merged
 
 
@@ -197,7 +190,7 @@ def run_ocr_on_candidates(
 ) -> Tuple[List[Dict[str, Any]], str]:
 
     if preferred_order is None:
-        preferred_order = ["enhanced", "original"]
+        preferred_order = ["enhanced", "original", "sharpened"]
 
     engine = get_ocr_engine()
 
@@ -220,8 +213,7 @@ def run_ocr_on_candidates(
             1 for l in lines if _looks_like_important_declaration(str(l.get("text", "")))
         )
 
-        score = avg_conf * (1 + 0.1 * len(lines))
-        score += 0.15 * important_count
+        score = avg_conf * (1 + 0.1 * len(lines)) + 0.15 * important_count
 
         logger.info(
             "OCR candidate '%s' → %d lines, avg_conf=%.3f, important=%d, score=%.3f",
