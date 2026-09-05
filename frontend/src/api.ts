@@ -8,7 +8,9 @@ export interface AnalyzeProductInput {
 
 const API_BASE = '/api/v1/ocr'
 
-export async function analyzeProduct(input: AnalyzeProductInput): Promise<AnalyzeResponse> {
+export async function analyzeProduct(
+  input: AnalyzeProductInput
+): Promise<AnalyzeResponse & { job_id: string }> {
   const formData = new FormData()
   const viewNames: string[] = []
 
@@ -29,13 +31,14 @@ export async function analyzeProduct(input: AnalyzeProductInput): Promise<Analyz
   const { job_id } = await response.json()
 
   // 2. Poll for results
-  return pollForResult(job_id)
+  const result = await pollForResult(job_id)
+  return { ...result, job_id }
 }
 
 async function pollForResult(job_id: string): Promise<AnalyzeResponse> {
-  const maxAttempts = 20
+  const maxAttempts = 40 // increased a bit
   for (let i = 0; i < maxAttempts; i++) {
-    await new Promise((resolve) => setTimeout(resolve, 2000)) // 2s delay
+    await new Promise((resolve) => setTimeout(resolve, 2000))
 
     const statusRes = await fetch(`${API_BASE}/jobs/${job_id}`, {
       credentials: 'include',
