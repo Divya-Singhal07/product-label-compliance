@@ -301,19 +301,22 @@ def extract_fields_with_llm(
     for model in models_to_try:
         is_reasoning = _is_reasoning_model(model)
         token_kwargs: Dict[str, Any] = {}
+
         if is_reasoning:
             token_kwargs["max_completion_tokens"] = int(
-                os.getenv("GROQ_MAX_COMPLETION_TOKENS", "8000")
+                os.getenv("GROQ_MAX_COMPLETION_TOKENS", "800")
             )
+            # Critical for free tier: disable thinking so model returns JSON
+            if "qwen3" in (model or "").lower():
+                token_kwargs["reasoning_effort"] = "none"
         else:
-            token_kwargs["max_tokens"] = int(os.getenv("GROQ_MAX_TOKENS", "2500"))
+            token_kwargs["max_tokens"] = int(os.getenv("GROQ_MAX_TOKENS", "1500"))
 
-        # Reasoning models often fail Groq json_object validation (empty
-        # failed_generation). Try strict JSON first, then plain text.
-        format_modes: List[Optional[Dict[str, str]]] = [
-            {"type": "json_object"},
-            None,
-        ]
+        # Prefer plain mode first for reasoning models (json_object often fails)
+        if is_reasoning:
+            format_modes: List[Optional[Dict[str, str]]] = [None, {"type": "json_object"}]
+        else:
+            format_modes = [{"type": "json_object"}, None]
 
         for response_format in format_modes:
             create_kwargs: Dict[str, Any] = {
@@ -333,7 +336,9 @@ def extract_fields_with_llm(
 
             try:
                 response = client.chat.completions.create(**create_kwargs)
-                parsed = _parse_json_content(_message_text(response))
+                raw = _message_text(response)
+                logger.warning("=== RAW LLM OUTPUT (model=%s) ===\n%s\n=== END ===", model, raw[:1500] if raw else "<EMPTY>")
+                parsed = _parse_json_content(raw)
                 fields = parsed
                 if model != preferred or response_format is None:
                     logger.info(
@@ -360,6 +365,7 @@ def extract_fields_with_llm(
                     continue
                 logger.error("LLM extraction failed: %s", e)
                 continue
+
         if fields is not None:
             break
     else:
