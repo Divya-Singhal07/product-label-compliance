@@ -162,7 +162,7 @@ def _run_ocr_job(
         )
         batch = pre.process_batch(image_paths, view_names=view_names, product_id=product_id)
         logger.info("OCR job %s: running OCR + field extraction", job_id)
-        ocr = OCRProcessor()
+        ocr = OCRProcessor(preferred_candidates=["enhanced", "original"])
         front_name = view_names[0] if view_names else "front"
         final = ocr.process_product(batch, front_view_name=front_name)
         _require_usable_ocr(final)
