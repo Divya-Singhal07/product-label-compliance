@@ -18,8 +18,8 @@ function App() {
   const [isProcessing, setIsProcessing] = useState(false)
   const [fields, setFields] = useState<MergedFields | null>(null)
   const [result, setResult] = useState<ComplianceResult | null>(null)
+  const [jobId, setJobId] = useState<string | null>(null)
 
-  // Check session on startup and query parameters (?mode=forgot|login|register)
   useEffect(() => {
     getMe().then((u) => {
       setUser(u)
@@ -52,20 +52,16 @@ function App() {
     }
   }, [previewUrls])
 
-  /** Called whenever any "Scan Product" button is pressed. */
   function openScan() {
     if (user) {
-      // Already authenticated — go straight to workspace
       setMode('workspace')
       setWorkspaceView('scan')
       window.scrollTo(0, 0)
     } else {
-      // Not authenticated — show the auth modal
       setMode('auth')
     }
   }
 
-  /** Called by AuthModal on successful login/register. */
   function handleAuthSuccess(loggedInUser: User) {
     setUser(loggedInUser)
     setMode('workspace')
@@ -73,7 +69,6 @@ function App() {
     window.scrollTo(0, 0)
   }
 
-  /** Called by AccountMenu logout button. */
   function handleLogout() {
     setUser(null)
     setMode('landing')
@@ -85,6 +80,7 @@ function App() {
       const response = await analyzeProduct({ views: files })
       setFields(response.merged_fields)
       setResult(response.compliance_result ?? null)
+      setJobId(response.job_id)
       setWorkspaceView('result')
     } catch (error) {
       console.error('Analysis failed', error)
@@ -94,14 +90,12 @@ function App() {
     }
   }
 
-  // Don't render until we've resolved the session (avoids flash)
   if (!authChecked) {
     return null
   }
 
   return (
     <>
-      {/* Auth modal — sits on top of whatever page is showing */}
       {mode === 'auth' && (
         <AuthModal
           initialMode={authInitialMode}
@@ -124,6 +118,7 @@ function App() {
           isProcessing={isProcessing}
           fields={fields}
           result={result}
+          jobId={jobId}
           onSelect={(view, file) =>
             setFiles((current) => ({ ...current, [view]: file }))
           }
