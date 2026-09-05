@@ -231,6 +231,46 @@ def map_to_rule_engine(llm_fields: Dict[str, Any]) -> Dict[str, Any]:
         default=False,
     )
 
+    # Normalize category keys to match YAML rule files (e.g. cosmetics.yaml).
+    # LLM may emit singular "cosmetic"; boolean flags are a backup when type
+    # is missing or still "general".
+    _PRODUCT_TYPE_ALIASES = {
+        "cosmetic": "cosmetics",
+        "cosmetics": "cosmetics",
+        "food": "food",
+        "electronic": "electronic",
+        "electronics": "electronic",
+        "general": "general",
+        "alcohol": "alcohol",
+        "garment": "garments",
+        "garments": "garments",
+        "imported": "imported",
+        "drug": "drugs_medical",
+        "drugs": "drugs_medical",
+        "drugs_medical": "drugs_medical",
+        "medical": "drugs_medical",
+        "ecommerce": "ecommerce",
+        "e-commerce": "ecommerce",
+        "wholesale": "wholesale",
+        "seed": "seeds",
+        "seeds": "seeds",
+        "multi_piece": "multi_piece",
+        "multipiece": "multi_piece",
+    }
+
+    raw_type = (str(product_type).strip().lower() if product_type else "") or "general"
+    product_type = _PRODUCT_TYPE_ALIASES.get(raw_type, raw_type)
+
+    if product_type == "general":
+        if is_food:
+            product_type = "food"
+        elif is_cosmetic:
+            product_type = "cosmetics"
+        elif is_electronic:
+            product_type = "electronic"
+        elif is_imported:
+            product_type = "imported"
+
     # ---------------------------------------------------------
     # Shelf-life detection
     # ---------------------------------------------------------

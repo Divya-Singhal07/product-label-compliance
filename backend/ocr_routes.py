@@ -66,7 +66,17 @@ _TEXT_EXTRACTION_FIELDS = (
 
 
 def _has_usable_llm_fields(view_data: Dict[str, Any]) -> bool:
-    """Return whether a view contains usable LLM-derived label fields."""
+    """Return whether a view contains usable LLM-derived label fields.
+
+    Rules-based (regex) extraction must never count as success. A single
+    non-mandatory field like brand/product_name filled by the regex extractor
+    previously caused the guard to skip retry and ship a fake 17/100 score.
+    """
+    # Reject deterministic fallback — only real LLM (or llm_retry) counts.
+    method = view_data.get("extraction_method")
+    if method == "rules":
+        return False
+
     ocr_lines = view_data.get("ocr_lines")
     fields = view_data.get("fields")
     if not isinstance(ocr_lines, list) or not isinstance(fields, dict):
@@ -195,15 +205,22 @@ def _run_ocr_job(
             elif isinstance(vdata.get("fields"), dict) and "error" in vdata["fields"]:
                 logger.warning("OCR view %s field extraction error: %s", vname, vdata["fields"]["error"])
 
-        # 3️⃣ Rule Engine – map OCR fields to canonical format, then check compliance
+        # 3️⃣ Rule Engine – map OCR fields to canonical format, then check compliance.
+        # Do not swallow engine failures: a null compliance_result produces the
+        # identical "AWAITING ANALYSIS" UI for every image.
         try:
             rule_input = map_to_rule_engine(merged_fields)
             compliance_result = run_compliance_check(rule_input)
-            comp_score = getattr(compliance_result, "score", None) if compliance_result else None
+            if isinstance(compliance_result, dict):
+                comp_score = compliance_result.get("score")
+            else:
+                comp_score = getattr(compliance_result, "score", None)
             logger.info("OCR job %s compliance check complete. Score: %s", job_id, comp_score)
         except Exception as re_exc:
-            logger.warning("Rule Engine failed, returning OCR-only result: %s", re_exc)
-            compliance_result = None
+            logger.exception("Rule Engine failed for job %s", job_id)
+            raise RuntimeError(
+                f"Rule engine failed; no compliance score was generated: {re_exc}"
+            ) from re_exc
 
         # Format compliance result dictionary
         comp_dict = None

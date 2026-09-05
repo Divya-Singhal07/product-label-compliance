@@ -146,9 +146,13 @@ class OCRProcessor:
                 method = "llm"
 
             except Exception as e:
+                # Rules fallback is intentional for local/dev tooling, but the
+                # API layer MUST reject extraction_method == "rules" so a
+                # partial regex result is never scored as real compliance.
                 logger.warning(
                     "LLM extraction failed (%s). "
-                    "Falling back to deterministic rules.",
+                    "Falling back to deterministic rules. "
+                    "API must not score rules-only results.",
                     e,
                 )
 
