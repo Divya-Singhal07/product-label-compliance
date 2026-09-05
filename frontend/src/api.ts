@@ -32,11 +32,13 @@ export async function analyzeProduct(
 
   // 2. Poll for results
   const result = await pollForResult(job_id)
+
+  // Return both result + job_id
   return { ...result, job_id }
 }
 
 async function pollForResult(job_id: string): Promise<AnalyzeResponse> {
-  const maxAttempts = 40 // increased a bit
+  const maxAttempts = 40
   for (let i = 0; i < maxAttempts; i++) {
     await new Promise((resolve) => setTimeout(resolve, 2000))
 
