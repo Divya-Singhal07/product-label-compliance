@@ -153,10 +153,12 @@ def _run_ocr_job(
         logger.info("OCR job %s: preprocessing %s image(s)", job_id, len(image_paths))
         pre = PackageImagePreprocessor(
             debug=False,
+            save_intermediate=False,      # important for speed
             max_workers=1,
             enable_deskew=False,
             enable_perspective=False,
             enable_glare_reduction=False,
+            max_side=1600,                # reduced from 2400
         )
         batch = pre.process_batch(image_paths, view_names=view_names, product_id=product_id)
         logger.info("OCR job %s: running OCR + field extraction", job_id)
