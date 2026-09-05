@@ -80,7 +80,7 @@ function App() {
       const response = await analyzeProduct({ views: files })
       setFields(response.merged_fields)
       setResult(response.compliance_result ?? null)
-      setJobId(response.job_id)
+      setJobId(response.job_id) // important
       setWorkspaceView('result')
     } catch (error) {
       console.error('Analysis failed', error)
