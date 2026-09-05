@@ -3,12 +3,13 @@ import json
 import logging
 import os
 import threading
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import List, Optional, Dict, Any, Union, cast
 
 from fastapi import APIRouter, Depends, File, UploadFile, Form, HTTPException, status
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
 
 # Shared auth dependency – supports running both as package and standalone
 try:
@@ -16,37 +17,42 @@ try:
 except ImportError:
     from deps import get_current_user, supabase_client
 
-# Import OCR pipeline components (no changes to label_lens code)
+# Import OCR pipeline components
 from label_lens.preprocessing.pipeline import PackageImagePreprocessor
 from label_lens.ocr.ocr_pipeline import OCRProcessor
 from label_lens.ocr.llm_extractor import extract_fields_with_llm
 from label_lens.ocr.product_id import generate_product_id
 
-# Rule Engine – mapper converts OCR fields → canonical format, engine runs compliance
+# Rule Engine
 from label_lens.rule_engine_mapper import map_to_rule_engine
 from label_lens.rule_engine.engine import run_compliance_check
 
-logger = logging.getLogger(__name__)
+# PDF Generator – adjust this import if your path is different
+try:
+    from label_lens.rule_engine.reports.pdf_generator import generate_compliance_pdf
+except ImportError:
+    try:
+        from label_lens.reports.pdf_generator import generate_compliance_pdf
+    except ImportError:
+        from rule_engine.reports.pdf_generator import generate_compliance_pdf
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/ocr")
 
-# Simple in-memory job store – tracks active processing jobs
+# Simple in-memory job store
 _JOBS: Dict[str, Dict[str, Any]] = {}
 
 
 @router.get("/runtime")
 async def get_runtime_status(user=Depends(get_current_user)):
-    """Expose safe diagnostics for the active OCR service instance.
-
-    This deliberately returns only feature flags. It never returns environment
-    values, tokens, OCR text, uploaded-file paths, or user data.
-    """
+    """Expose safe diagnostics for the active OCR service instance."""
     try:
         from .deps import _load_runtime_config
     except ImportError:
         from deps import _load_runtime_config
 
     _load_runtime_config()
+
     try:
         import groq  # noqa: F401
         groq_available = True
@@ -68,12 +74,6 @@ _TEXT_EXTRACTION_FIELDS = (
 
 
 def _has_usable_llm_fields(view_data: Dict[str, Any]) -> bool:
-    """Return whether a view contains usable LLM-derived label fields.
-
-    Rules-based (regex) extraction must never count as success. A single
-    non-mandatory field like brand/product_name filled by the regex extractor
-    previously caused the guard to skip retry and ship a fake 17/100 score.
-    """
     method = view_data.get("extraction_method")
     if method == "rules":
         return False
@@ -84,12 +84,10 @@ def _has_usable_llm_fields(view_data: Dict[str, Any]) -> bool:
         return False
     if not any(isinstance(line, dict) and str(line.get("text", "")).strip() for line in ocr_lines):
         return False
-
     return any(fields.get(field) not in (None, "") for field in _TEXT_EXTRACTION_FIELDS)
 
 
 def _require_usable_ocr(final: Dict[str, Any]) -> None:
-    """Reject a job when OCR produced no text for every supplied image."""
     views = final.get("views")
     if not isinstance(views, dict):
         raise RuntimeError("OCR returned no view results. No compliance score was generated.")
@@ -110,12 +108,6 @@ def _require_usable_ocr(final: Dict[str, Any]) -> None:
 
 
 def _require_llm_extraction(ocr: OCRProcessor, final: Dict[str, Any]) -> List[str]:
-    """Ensure at least one view has usable LLM fields.
-
-    Views that have OCR text but no useful declarations (e.g. a barcode side
-    or mostly blank panel) are allowed to stay empty. We only fail the job
-    when *no* view produced usable LLM fields.
-    """
     views = final.get("views")
     if not isinstance(views, dict):
         return []
@@ -190,7 +182,6 @@ def _run_ocr_job(
     product_id: Optional[str],
     officer_info: Optional[Dict[str, Any]] = None,
 ) -> None:
-    """Background task that runs the OCR pipeline and stores the result."""
     try:
         _JOBS[job_id]["status"] = "processing"
         logger.info("OCR job %s: preprocessing %s image(s)", job_id, len(image_paths))
@@ -208,6 +199,7 @@ def _run_ocr_job(
         ocr = OCRProcessor()
         front_name = view_names[0] if view_names else "front"
         final = ocr.process_product(batch, front_view_name=front_name)
+
         _require_usable_ocr(final)
         retried_views = _require_llm_extraction(ocr, final)
 
@@ -319,6 +311,7 @@ async def create_job(
             parsed = json.loads(view_names)
         except (json.JSONDecodeError, TypeError) as exc:
             raise HTTPException(status_code=400, detail="view_names must be a JSON array") from exc
+
         if (
             not isinstance(parsed, list)
             or len(parsed) != len(files)
@@ -356,8 +349,8 @@ async def create_job(
         saved_paths.append(dest)
 
     now = datetime.now(timezone.utc).isoformat()
-
     user_metadata = getattr(user, "user_metadata", {}) or getattr(user, "raw_user_meta_data", {}) or {}
+
     officer_info = {
         "officer_user_id": getattr(user, "id", None),
         "officer_email": getattr(user, "email", None),
@@ -387,6 +380,7 @@ async def create_job(
         name=f"ocr-{job_id[:8]}",
     )
     worker.start()
+
     logger.info("OCR job %s queued (%s file(s))", job_id, len(saved_paths))
 
     return JSONResponse(
@@ -406,6 +400,7 @@ async def get_job_status(job_id: str, user=Depends(get_current_user)):
         raise HTTPException(status_code=404, detail="Job not found")
     if job.get("owner") != getattr(user, "id", None):
         raise HTTPException(status_code=403, detail="Not authorized")
+
     response = {"job_id": job_id, "status": job["status"]}
     if job["status"] == "failed":
         response["error"] = job.get("error", "Analysis failed")
@@ -424,6 +419,55 @@ async def get_job_result(job_id: str, user=Depends(get_current_user)):
     return job["result"]
 
 
+@router.get("/jobs/{job_id}/pdf")
+async def download_compliance_pdf(job_id: str, user=Depends(get_current_user)):
+    """Generate and download PDF compliance report for a completed job."""
+    job = _JOBS.get(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    if job.get("owner") != getattr(user, "id", None):
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    if job["status"] != "completed":
+        raise HTTPException(status_code=409, detail="Job not completed yet")
+
+    result = job.get("result")
+    if not result:
+        raise HTTPException(status_code=404, detail="No result found for this job")
+
+    compliance = result.get("compliance_result")
+    merged_fields = result.get("merged_fields", {})
+
+    if not compliance:
+        raise HTTPException(status_code=400, detail="No compliance result available to generate PDF")
+
+    try:
+        # Create temporary PDF file
+        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
+        pdf_path = temp_file.name
+        temp_file.close()
+
+        # Call the PDF generator
+        # Note: Adjust the arguments below according to your actual generate_compliance_pdf signature
+        generate_compliance_pdf(
+            result=compliance,
+            fields=merged_fields,
+            output_path=pdf_path,
+            officer_name="Enforcement Officer",
+        )
+
+        return FileResponse(
+            path=pdf_path,
+            filename=f"Compliance_Report_{job_id[:8]}.pdf",
+            media_type="application/pdf",
+        )
+
+    except Exception as e:
+        logger.exception("Failed to generate PDF for job %s", job_id)
+        raise HTTPException(status_code=500, detail=f"PDF generation failed: {str(e)}")
+
+
 @router.get("/records")
 async def get_past_records(user=Depends(get_current_user)):
     """Fetch past immutable inspection records for the authenticated officer."""
@@ -431,14 +475,17 @@ async def get_past_records(user=Depends(get_current_user)):
         user_metadata = getattr(user, "user_metadata", {}) or getattr(user, "raw_user_meta_data", {}) or {}
         officer_id = user_metadata.get("officer_id") or getattr(user, "email", None)
         user_id = getattr(user, "id", None)
+
         query = (
             supabase_client()
             .table("inspection_records")
             .select("*")
             .order("created_at", desc=True)
         )
+
         if user_id:
             query = query.or_(f"officer_user_id.eq.{user_id},officer_id.eq.{officer_id}")
+
         response = query.limit(50).execute()
         return response.data or []
     except Exception as exc:
