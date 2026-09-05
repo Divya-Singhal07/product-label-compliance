@@ -216,6 +216,28 @@ class RuleEngine:
             data.product_type or "general"
         ).lower().strip()
 
+        # Normalize aliases so Layer 2 hits the correct YAML
+        # (e.g. LLM may emit "cosmetic" while file is cosmetics.yaml).
+        _TYPE_ALIASES = {
+            "cosmetic": "cosmetics",
+            "cosmetics": "cosmetics",
+            "electronics": "electronic",
+            "electronic": "electronic",
+            "garment": "garments",
+            "garments": "garments",
+            "drug": "drugs_medical",
+            "drugs": "drugs_medical",
+            "drugs_medical": "drugs_medical",
+            "medical": "drugs_medical",
+            "e-commerce": "ecommerce",
+            "ecommerce": "ecommerce",
+            "seed": "seeds",
+            "seeds": "seeds",
+            "multipiece": "multi_piece",
+            "multi_piece": "multi_piece",
+        }
+        product_type = _TYPE_ALIASES.get(product_type, product_type)
+
         specific_product = (
             data.specific_product or ""
         ).lower().strip() or None

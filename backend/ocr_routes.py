@@ -74,7 +74,6 @@ def _has_usable_llm_fields(view_data: Dict[str, Any]) -> bool:
     non-mandatory field like brand/product_name filled by the regex extractor
     previously caused the guard to skip retry and ship a fake 17/100 score.
     """
-    # Reject deterministic fallback — only real LLM (or llm_retry) counts.
     method = view_data.get("extraction_method")
     if method == "rules":
         return False
@@ -90,12 +89,7 @@ def _has_usable_llm_fields(view_data: Dict[str, Any]) -> bool:
 
 
 def _require_usable_ocr(final: Dict[str, Any]) -> None:
-    """Reject a job when OCR produced no text for every supplied image.
-
-    Previously, view errors and empty OCR responses were merged into the
-    default field schema and sent to the rule engine. The resulting score was
-    a misleading 17/100 rather than an OCR failure.
-    """
+    """Reject a job when OCR produced no text for every supplied image."""
     views = final.get("views")
     if not isinstance(views, dict):
         raise RuntimeError("OCR returned no view results. No compliance score was generated.")
@@ -133,7 +127,6 @@ def _require_llm_extraction(ocr: OCRProcessor, final: Dict[str, Any]) -> List[st
         if not isinstance(view_data, dict):
             continue
 
-        # Already has good LLM fields
         if _has_usable_llm_fields(view_data):
             any_usable = True
             continue
@@ -148,12 +141,10 @@ def _require_llm_extraction(ocr: OCRProcessor, final: Dict[str, Any]) -> List[st
 
         ocr_lines = cast(List[Dict[str, Any]], raw_lines)
 
-        # Retry LLM once for this view
         try:
             fields = extract_fields_with_llm(ocr_lines)
         except Exception as exc:
             logger.warning("LLM extraction retry failed for view %s: %s", view_name, exc)
-            # Do not kill the whole job – other views may still be good
             continue
 
         retry_view = {"ocr_lines": ocr_lines, "fields": fields}
@@ -168,7 +159,6 @@ def _require_llm_extraction(ocr: OCRProcessor, final: Dict[str, Any]) -> List[st
                 view_name,
             )
 
-    # Final safety check: at least one view must have produced usable fields
     if not any_usable:
         for view_data in views.values():
             if isinstance(view_data, dict) and _has_usable_llm_fields(view_data):
@@ -181,7 +171,6 @@ def _require_llm_extraction(ocr: OCRProcessor, final: Dict[str, Any]) -> List[st
             "No compliance score was generated."
         )
 
-    # Re-merge if we recovered any views
     if recovered_views:
         final["merged_fields"] = ocr._merge_fields(views)
         merged = final["merged_fields"]
@@ -201,16 +190,11 @@ def _run_ocr_job(
     product_id: Optional[str],
     officer_info: Optional[Dict[str, Any]] = None,
 ) -> None:
-    """Background task that runs the OCR pipeline and stores the result.
-    Mirrors the logic from label_lens/main_ocr.py but returns a dict instead of writing files.
-    After OCR, the merged fields are fed through the Rule Engine for compliance checking.
-    The final immutable audit record is saved to Supabase inspection_records.
-    """
+    """Background task that runs the OCR pipeline and stores the result."""
     try:
         _JOBS[job_id]["status"] = "processing"
         logger.info("OCR job %s: preprocessing %s image(s)", job_id, len(image_paths))
 
-        # 1. Preprocess images
         pre = PackageImagePreprocessor(
             debug=False,
             max_workers=1,
@@ -220,7 +204,6 @@ def _run_ocr_job(
         )
         batch = pre.process_batch(image_paths, view_names=view_names, product_id=product_id)
 
-        # 2. OCR + field extraction
         logger.info("OCR job %s: running OCR + field extraction", job_id)
         ocr = OCRProcessor()
         front_name = view_names[0] if view_names else "front"
@@ -235,9 +218,12 @@ def _run_ocr_job(
             if "error" in vdata:
                 logger.warning("OCR view %s reported error: %s", vname, vdata["error"])
             elif isinstance(vdata.get("fields"), dict) and "error" in vdata["fields"]:
-                logger.warning("OCR view %s field extraction error: %s", vname, vdata["fields"]["error"])
+                logger.warning(
+                    "OCR view %s field extraction error: %s",
+                    vname,
+                    vdata["fields"]["error"],
+                )
 
-        # 3. Rule Engine – map OCR fields to canonical format, then check compliance.
         try:
             rule_input = map_to_rule_engine(merged_fields)
             compliance_result: Dict[str, Any] = run_compliance_check(rule_input)
@@ -249,7 +235,9 @@ def _run_ocr_job(
                 f"Rule engine failed; no compliance score was generated: {re_exc}"
             ) from re_exc
 
-        comp_dict: Optional[Dict[str, Any]] = compliance_result if isinstance(compliance_result, dict) else None
+        comp_dict: Optional[Dict[str, Any]] = (
+            compliance_result if isinstance(compliance_result, dict) else None
+        )
 
         if comp_dict is not None and retried_views:
             warnings = comp_dict.setdefault("warnings", [])
@@ -260,7 +248,6 @@ def _run_ocr_job(
                     + "."
                 )
 
-        # Store in-memory result for current polling session
         _JOBS[job_id]["status"] = "completed"
         _JOBS[job_id]["result"] = {
             "product_id": final["product_id"],
@@ -271,13 +258,14 @@ def _run_ocr_job(
             "metadata": {"llm_retry_views": retried_views},
         }
 
-        # 4. Persist to Supabase immutable inspection_records audit table
         if officer_info:
             try:
                 is_comp = comp_dict.get("is_compliant", False) if comp_dict else False
                 score = float(comp_dict.get("score", 0.0)) if comp_dict else 0.0
                 summary = comp_dict.get("summary", "") if comp_dict else ""
-                needs_review = bool(comp_dict.get("needs_manual_review", False)) if comp_dict else False
+                needs_review = (
+                    bool(comp_dict.get("needs_manual_review", False)) if comp_dict else False
+                )
                 violations = comp_dict.get("violations", []) if comp_dict else []
                 missing = comp_dict.get("missing_fields", []) if comp_dict else []
                 warnings = comp_dict.get("warnings", []) if comp_dict else []
@@ -324,13 +312,7 @@ async def create_job(
     metadata: Optional[str] = Form(None),
     user=Depends(get_current_user),
 ):
-    """Create a new OCR job.
-    - `files` : one or more images (front, back, side …)
-    - `view_names` : JSON-encoded list matching the order of `files`
-    - `product_id` : optional override for the auto-generated product ID
-    - `metadata` : optional free-form JSON saved with the job
-    Returns a UUID job identifier.
-    """
+    """Create a new OCR job."""
     parsed_views: Optional[List[str]] = None
     if view_names:
         try:
@@ -340,7 +322,9 @@ async def create_job(
         if (
             not isinstance(parsed, list)
             or len(parsed) != len(files)
-            or not all(isinstance(view, str) and view in {"front", "back", "side"} for view in parsed)
+            or not all(
+                isinstance(view, str) and view in {"front", "back", "side"} for view in parsed
+            )
             or len(set(parsed)) != len(parsed)
         ):
             raise HTTPException(
@@ -373,7 +357,6 @@ async def create_job(
 
     now = datetime.now(timezone.utc).isoformat()
 
-    # Extract officer metadata from user
     user_metadata = getattr(user, "user_metadata", {}) or getattr(user, "raw_user_meta_data", {}) or {}
     officer_info = {
         "officer_user_id": getattr(user, "id", None),
@@ -384,7 +367,6 @@ async def create_job(
         "role": user_metadata.get("role") or "",
     }
 
-    # Initialise the job entry
     _JOBS[job_id] = {
         "status": "queued",
         "owner": getattr(user, "id", None),
@@ -392,8 +374,6 @@ async def create_job(
         "metadata": parsed_metadata,
     }
 
-    # Run OCR in a daemon thread so long Paddle/Groq work cannot stall the
-    # request worker the way FastAPI BackgroundTasks sometimes does.
     worker = threading.Thread(
         target=_run_ocr_job,
         kwargs={
@@ -451,7 +431,12 @@ async def get_past_records(user=Depends(get_current_user)):
         user_metadata = getattr(user, "user_metadata", {}) or getattr(user, "raw_user_meta_data", {}) or {}
         officer_id = user_metadata.get("officer_id") or getattr(user, "email", None)
         user_id = getattr(user, "id", None)
-        query = supabase_client().table("inspection_records").select("*").order("created_at", desc=True)
+        query = (
+            supabase_client()
+            .table("inspection_records")
+            .select("*")
+            .order("created_at", desc=True)
+        )
         if user_id:
             query = query.or_(f"officer_user_id.eq.{user_id},officer_id.eq.{officer_id}")
         response = query.limit(50).execute()
