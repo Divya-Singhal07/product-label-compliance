@@ -151,22 +151,29 @@ def _run_ocr_job(
     try:
         _JOBS[job_id]["status"] = "processing"
         logger.info("OCR job %s: preprocessing %s image(s)", job_id, len(image_paths))
+
+        # ===== SPEED + RELIABILITY SETTINGS =====
         pre = PackageImagePreprocessor(
             debug=False,
-            save_intermediate=False,      # important for speed
+            save_intermediate=False,
             max_workers=1,
             enable_deskew=False,
             enable_perspective=False,
             enable_glare_reduction=False,
-            max_side=1600,                # reduced from 2400
+            max_side=1600,
         )
         batch = pre.process_batch(image_paths, view_names=view_names, product_id=product_id)
+
         logger.info("OCR job %s: running OCR + field extraction", job_id)
-        ocr = OCRProcessor(preferred_candidates=["enhanced", "original"])
+
+        # Balanced candidates
+        ocr = OCRProcessor(preferred_candidates=["enhanced", "original", "sharpened"])
         front_name = view_names[0] if view_names else "front"
         final = ocr.process_product(batch, front_view_name=front_name)
+
         _require_usable_ocr(final)
         retried_views = _require_llm_extraction(ocr, final)
+
         merged_fields = final["merged_fields"]
         logger.info("OCR job %s extracted merged fields: %s", job_id, merged_fields)
 
@@ -179,6 +186,7 @@ def _run_ocr_job(
             raise RuntimeError(f"Rule engine failed; no compliance score was generated: {re_exc}") from re_exc
 
         comp_dict = compliance_result if isinstance(compliance_result, dict) else None
+
         if comp_dict is not None and retried_views:
             warnings = comp_dict.setdefault("warnings", [])
             if isinstance(warnings, list):
