@@ -1,13 +1,6 @@
 """
-OCR + Field Extraction + Auto Product ID pipeline.
-
-Supports:
-- Multi-view processing (front / back / side)
-- Multiple OCR preprocessing candidates
-- LLM extraction
-- Rule-based fallback
-- Consistent field schema
-- Smart multi-view merging
+OCR + Field Extraction + Auto Product ID pipeline
+Balanced version (Speed + Reliability)
 """
 
 from __future__ import annotations
@@ -51,21 +44,15 @@ FIELD_DEFAULTS: Dict[str, Any] = {
 
 class OCRProcessor:
 
-    def __init__(
-        self,
-        preferred_candidates: Optional[List[str]] = None,
-    ):
-        # SPEED OPTIMIZATION: Only 2 candidates instead of 5
+    def __init__(self, preferred_candidates: Optional[List[str]] = None):
+        # Balanced: 3 candidates
         self.preferred_candidates = preferred_candidates or [
             "enhanced",
             "original",
+            "sharpened",
         ]
 
-    def _normalize_fields(
-        self,
-        fields: Optional[Dict[str, Any]],
-    ) -> Dict[str, Any]:
-
+    def _normalize_fields(self, fields: Optional[Dict[str, Any]]) -> Dict[str, Any]:
         normalized = dict(FIELD_DEFAULTS)
 
         if not isinstance(fields, dict):
@@ -86,12 +73,7 @@ class OCRProcessor:
 
         return normalized
 
-    def process_view(
-        self,
-        preprocessed_result: Dict[str, Any],
-        use_llm: bool = True,
-    ) -> Dict[str, Any]:
-
+    def process_view(self, preprocessed_result: Dict[str, Any], use_llm: bool = True) -> Dict[str, Any]:
         candidates = preprocessed_result.get("images", {})
 
         if not candidates:
@@ -107,10 +89,7 @@ class OCRProcessor:
                 fields = extract_fields_with_llm(ocr_lines)
                 method = "llm"
             except Exception as e:
-                logger.warning(
-                    "LLM extraction failed (%s). Falling back to deterministic rules.",
-                    e,
-                )
+                logger.warning("LLM extraction failed (%s). Falling back to rules.", e)
                 fields = extract_fields(ocr_lines)["fields"]
                 method = "rules"
         else:
@@ -129,11 +108,7 @@ class OCRProcessor:
             "quality_metrics": preprocessed_result.get("quality_metrics"),
         }
 
-    def _merge_fields(
-        self,
-        view_outputs: Dict[str, Dict],
-    ) -> Dict[str, Any]:
-
+    def _merge_fields(self, view_outputs: Dict[str, Dict]) -> Dict[str, Any]:
         priority = {
             "brand": ["front", "side", "back"],
             "generic_name": ["front", "side", "back"],
@@ -189,12 +164,8 @@ class OCRProcessor:
             if "error" in pre_res:
                 view_outputs[view_name] = {"error": pre_res["error"]}
                 continue
-
             try:
-                view_outputs[view_name] = self.process_view(
-                    pre_res,
-                    use_llm=use_llm,
-                )
+                view_outputs[view_name] = self.process_view(pre_res, use_llm=use_llm)
             except Exception as e:
                 logger.exception("OCR processing failed for view '%s'", view_name)
                 view_outputs[view_name] = {"error": str(e)}
@@ -212,8 +183,6 @@ class OCRProcessor:
             "product_folder": batch_result.get("product_folder"),
             "views": view_outputs,
             "merged_fields": merged_fields,
-            "front_fields": (
-                view_outputs.get(front_view_name, {}).get("fields", {})
-            ),
+            "front_fields": view_outputs.get(front_view_name, {}).get("fields", {}),
             "ready_for_rule_engine": True,
         }
