@@ -1,5 +1,5 @@
 """
-PaddleOCR wrapper – Balanced version (Speed + Reliability)
+PaddleOCR wrapper – Compatible with new PaddleOCR versions
 """
 
 from __future__ import annotations
@@ -22,41 +22,53 @@ def get_ocr_engine(lang: str = "en"):
     if _ocr_engine is None:
         try:
             from paddleocr import PaddleOCR
+            print(">>> Initializing PaddleOCR...")
 
+            # Try different initialization styles for compatibility
             try:
-                # Try newer style first
-                _ocr_engine = PaddleOCR(
-                    lang=lang,
-                    use_angle_cls=True,
-                    show_log=False,
-                )
-            except TypeError:
-                # Fallback for different PaddleOCR versions
+                # Newest style (no show_log, no use_angle_cls in some versions)
+                _ocr_engine = PaddleOCR(lang=lang)
+            except Exception as e1:
+                print(f">>> First init style failed: {e1}")
                 try:
-                    _ocr_engine = PaddleOCR(lang=lang, use_angle_cls=True)
-                except Exception:
-                    _ocr_engine = PaddleOCR(lang=lang)
+                    _ocr_engine = PaddleOCR(use_angle_cls=True, lang=lang)
+                except Exception as e2:
+                    print(f">>> Second init style failed: {e2}")
+                    _ocr_engine = PaddleOCR()
 
+            print(">>> PaddleOCR initialized successfully")
             logger.info("PaddleOCR engine initialized successfully")
 
-        except ImportError as e:
-            raise ImportError(
-                "PaddleOCR is not installed. Run: pip install paddlepaddle paddleocr"
-            ) from e
+        except Exception as e:
+            print(f">>> FAILED to initialize PaddleOCR: {e}")
+            logger.exception("Failed to initialize PaddleOCR")
+            raise
 
     return _ocr_engine
 
 
 def _run_single_orientation(image: np.ndarray, engine) -> List[Dict[str, Any]]:
-    result = engine.ocr(image)
+    if image is None or image.size == 0:
+        print(">>> Empty image received")
+        return []
+
+    print(f">>> Running OCR on image shape: {image.shape}")
+
+    try:
+        result = engine.ocr(image)
+    except Exception as e:
+        print(f">>> engine.ocr() failed: {e}")
+        logger.exception("engine.ocr failed")
+        return []
 
     if not result:
+        print(">>> OCR returned empty result")
         return []
 
     lines: List[Dict[str, Any]] = []
     first = result[0]
 
-    # New format (PP-OCRv6 / PaddleX)
+    # ------ New format (PP-OCRv6 / PaddleX) ------
     if hasattr(first, "get") or isinstance(first, dict):
         try:
             texts = first.get("rec_texts") or first.get("texts") or []
@@ -81,11 +93,12 @@ def _run_single_orientation(image: np.ndarray, engine) -> List[Dict[str, Any]]:
                     "confidence": conf,
                     "box": box,
                 })
+            print(f">>> Parsed {len(lines)} lines (new format)")
             return lines
         except Exception as e:
-            logger.warning("Failed parsing new OCRResult format: %s", e)
+            print(f">>> Failed new format parsing: {e}")
 
-    # Older format
+    # ------ Old format ------
     try:
         data = first if isinstance(first, (list, tuple)) else result
         for item in data:
@@ -99,15 +112,15 @@ def _run_single_orientation(image: np.ndarray, engine) -> List[Dict[str, Any]]:
                 else:
                     text, conf = str(text_info), 0.9
                 text = str(text).strip()
-                if not text:
-                    continue
-                lines.append({
-                    "text": text,
-                    "confidence": float(conf),
-                    "box": box,
-                })
+                if text:
+                    lines.append({
+                        "text": text,
+                        "confidence": float(conf),
+                        "box": box,
+                    })
+        print(f">>> Parsed {len(lines)} lines (old format)")
     except Exception as e:
-        logger.warning("Failed parsing old OCR format: %s", e)
+        print(f">>> Failed old format parsing: {e}")
 
     return lines
 
@@ -123,25 +136,11 @@ def _merge_ocr_lines(all_lines: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         if not text:
             continue
         key = _normalize_text(text)
-        if key not in best_by_text:
+        if key not in best_by_text or float(line.get("confidence", 0)) > float(
+            best_by_text[key].get("confidence", 0)
+        ):
             best_by_text[key] = line
-        else:
-            old_conf = float(best_by_text[key].get("confidence", 0.0))
-            new_conf = float(line.get("confidence", 0.0))
-            if new_conf > old_conf:
-                best_by_text[key] = line
     return list(best_by_text.values())
-
-
-def _looks_like_important_declaration(text: str) -> bool:
-    t = text.lower()
-    keywords = [
-        "mrp", "maximum retail", "retail price", "incl", "inclusive",
-        "unit sale", "batch", "mfd", "mfg", "manufact", "expiry", "exp",
-        "best before", "use by", "net wt", "net weight", "quantity",
-        "rs", "inr", "₹", "disinfectant", "toilet",
-    ]
-    return any(k in t for k in keywords)
 
 
 def run_ocr_on_image(image: np.ndarray, engine=None) -> List[Dict[str, Any]]:
@@ -151,7 +150,6 @@ def run_ocr_on_image(image: np.ndarray, engine=None) -> List[Dict[str, Any]]:
     if image is None or image.size == 0:
         return []
 
-    # Balanced: normal + one rotation (good speed + better accuracy)
     orientations = [
         ("0deg", image),
         ("90deg", cv2.rotate(image, cv2.ROTATE_90_CLOCKWISE)),
@@ -159,28 +157,19 @@ def run_ocr_on_image(image: np.ndarray, engine=None) -> List[Dict[str, Any]]:
 
     all_lines: List[Dict[str, Any]] = []
 
-    for orientation_name, rotated_image in orientations:
+    for name, img in orientations:
         try:
-            lines = _run_single_orientation(rotated_image, engine)
-            logger.info("OCR orientation '%s' → %d lines", orientation_name, len(lines))
+            lines = _run_single_orientation(img, engine)
+            print(f">>> Orientation {name}: {len(lines)} lines")
             for line in lines:
                 line = dict(line)
-                line["orientation"] = orientation_name
+                line["orientation"] = name
                 all_lines.append(line)
         except Exception as e:
-            logger.warning("OCR failed for orientation '%s': %s", orientation_name, e)
+            print(f">>> Orientation {name} failed: {e}")
 
     merged = _merge_ocr_lines(all_lines)
-
-    merged.sort(
-        key=lambda x: (
-            _looks_like_important_declaration(str(x.get("text", ""))),
-            float(x.get("confidence", 0.0)),
-        ),
-        reverse=True,
-    )
-
-    logger.info("Final OCR → %d unique lines", len(merged))
+    print(f">>> Total unique lines after merge: {len(merged)}")
     return merged
 
 
@@ -198,31 +187,31 @@ def run_ocr_on_candidates(
     best_score = -1.0
     best_name = "none"
 
+    print(f">>> Available candidates: {list(candidates.keys())}")
+
     for name in preferred_order:
         if name not in candidates:
+            print(f">>> Candidate '{name}' not found")
             continue
 
         img = candidates[name]
+        print(f">>> Trying candidate: {name}")
+
         lines = run_ocr_on_image(img, engine=engine)
 
         if not lines:
+            print(f">>> Candidate '{name}' returned 0 lines")
             continue
 
         avg_conf = sum(float(l.get("confidence", 0.0)) for l in lines) / max(len(lines), 1)
-        important_count = sum(
-            1 for l in lines if _looks_like_important_declaration(str(l.get("text", "")))
-        )
+        score = avg_conf * (1 + 0.1 * len(lines))
 
-        score = avg_conf * (1 + 0.1 * len(lines)) + 0.15 * important_count
-
-        logger.info(
-            "OCR candidate '%s' → %d lines, avg_conf=%.3f, important=%d, score=%.3f",
-            name, len(lines), avg_conf, important_count, score,
-        )
+        print(f">>> Candidate '{name}' → {len(lines)} lines, score={score:.3f}")
 
         if score > best_score:
             best_score = score
             best_lines = lines
             best_name = name
 
+    print(f">>> Best candidate: {best_name} with {len(best_lines)} lines")
     return best_lines, best_name
