@@ -24,7 +24,6 @@ from label_lens.ocr.product_id import generate_product_id
 from label_lens.rule_engine_mapper import map_to_rule_engine
 from label_lens.rule_engine.engine import run_compliance_check
 
-# PDF Generator
 from label_lens.report_generator import generate_report
 
 logger = logging.getLogger(__name__)
@@ -152,7 +151,6 @@ def _run_ocr_job(
         _JOBS[job_id]["status"] = "processing"
         logger.info("OCR job %s: preprocessing %s image(s)", job_id, len(image_paths))
 
-        # ===== SPEED + RELIABILITY SETTINGS =====
         pre = PackageImagePreprocessor(
             debug=False,
             save_intermediate=False,
@@ -166,7 +164,6 @@ def _run_ocr_job(
 
         logger.info("OCR job %s: running OCR + field extraction", job_id)
 
-        # Balanced candidates
         ocr = OCRProcessor(preferred_candidates=["enhanced", "original", "sharpened"])
         front_name = view_names[0] if view_names else "front"
         final = ocr.process_product(batch, front_view_name=front_name)
