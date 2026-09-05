@@ -117,7 +117,7 @@ export function WorkspacePage({
           <div className="work-process">
             {isProcessing ? (
               <p className="processing" role="status">
-                Analyzing… OCR and compliance can take some time. Keep this tab open.
+                Analyzing… Keep this tab open.
               </p>
             ) : (
               <p>Ready to analyze.</p>
