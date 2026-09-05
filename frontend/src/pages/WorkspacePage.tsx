@@ -30,6 +30,7 @@ interface WorkspacePageProps {
   isProcessing: boolean
   fields: MergedFields | null
   result: ComplianceResult | null
+  jobId: string | null
   onSelect: (view: LabelView, file: File) => void
   onClear: (view: LabelView) => void
   onAnalyze: () => void
@@ -46,6 +47,7 @@ export function WorkspacePage({
   isProcessing,
   fields,
   result,
+  jobId,
   onSelect,
   onClear,
   onAnalyze,
@@ -55,6 +57,29 @@ export function WorkspacePage({
 }: WorkspacePageProps) {
   const hasImage = Boolean(files.front || files.back || files.side)
   const violations: Violation[] = result?.violations ?? []
+
+  async function handleDownloadPDF() {
+    if (!jobId) return
+    try {
+      const res = await fetch(`/api/v1/ocr/jobs/${jobId}/pdf`, {
+        credentials: 'include',
+      })
+      if (!res.ok) throw new Error('Failed to generate PDF')
+
+      const blob = await res.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `Compliance_Report_${jobId.slice(0, 8)}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      window.URL.revokeObjectURL(url)
+    } catch (err) {
+      console.error(err)
+      alert('Could not download PDF. Please try again.')
+    }
+  }
 
   return (
     <div className="workspace">
@@ -165,7 +190,7 @@ export function WorkspacePage({
             <div>
               <h2>Missing fields</h2>
               <p>
-                {result?.missing_fields.length
+                {result?.missing_fields?.length
                   ? result.missing_fields.join(', ')
                   : 'None yet.'}
               </p>
@@ -173,7 +198,7 @@ export function WorkspacePage({
             <div>
               <h2>Warnings</h2>
               <p>
-                {result?.warnings.length
+                {result?.warnings?.length
                   ? result.warnings.join(' ')
                   : 'None yet.'}
               </p>
@@ -198,12 +223,13 @@ export function WorkspacePage({
           )}
 
           <h2>Report</h2>
-          <p>
-            PDF export will attach to the existing Python report generator. Download
-            is not wired.
-          </p>
           <div className="hero-actions">
-            <button type="button" className="btn-solid" disabled>
+            <button
+              type="button"
+              className="btn-solid"
+              disabled={!jobId}
+              onClick={handleDownloadPDF}
+            >
               DOWNLOAD PDF →
             </button>
             <button type="button" className="btn-ghost dark" onClick={onOpenScan}>
