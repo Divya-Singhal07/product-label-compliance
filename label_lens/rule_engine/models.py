@@ -61,7 +61,8 @@ class Violation(BaseModel):
     detected_value: Optional[str] = None
     expected: Optional[str] = None
     layer: Optional[str] = None
-
+    legal_reference: Optional[str] = None
+    explanation: Optional[str] = None
 
 class ComplianceResult(BaseModel):
     is_compliant: bool

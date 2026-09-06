@@ -9,7 +9,11 @@ const SLOTS: { view: LabelView; title: string }[] = [
   { view: 'back', title: 'Back' },
   { view: 'side', title: 'Side' },
 ]
-
+function getConfidenceLevel(confidence: number) {
+  if (confidence >= 0.9) return 'HIGH'
+  if (confidence >= 0.7) return 'MEDIUM'
+  return 'LOW'
+}
 const FIELD_LABELS: { key: keyof MergedFields; label: string }[] = [
   { key: 'brand', label: 'Brand' },
   { key: 'product_name', label: 'Product Name' },
@@ -29,6 +33,7 @@ interface WorkspacePageProps {
   previewUrls: Partial<Record<LabelView, string>>
   isProcessing: boolean
   fields: MergedFields | null
+  fieldConfidence: Record<string, number>
   result: ComplianceResult | null
   jobId: string | null
   onSelect: (view: LabelView, file: File) => void
@@ -46,6 +51,7 @@ export function WorkspacePage({
   previewUrls,
   isProcessing,
   fields,
+  fieldConfidence,
   result,
   jobId,
   onSelect,
@@ -169,7 +175,8 @@ export function WorkspacePage({
             {FIELD_LABELS.map((row) => {
               const raw = fields?.[row.key]
               const empty = raw === null || raw === undefined || raw === ''
-              return (
+              const confidence = fieldConfidence[row.key]
+		 return (
                 <li
                   key={row.key}
                   className={empty ? 'field-row is-miss' : 'field-row is-ok'}
@@ -179,7 +186,21 @@ export function WorkspacePage({
                     {empty ? '—' : String(raw)}
                   </span>
                   <span className="field-mark">
-                    {empty ? 'MISSING' : 'PRESENT'}
+                    <span
+  className={
+    empty
+      ? 'field-mark'
+      : confidence !== undefined
+        ? `field-mark confidence-${getConfidenceLevel(confidence).toLowerCase()}`
+        : 'field-mark'
+  }
+>
+  {empty
+    ? 'MISSING'
+    : confidence !== undefined
+      ? `${getConfidenceLevel(confidence)} · ${Math.round(confidence * 100)}%`
+      : 'PRESENT'}
+</span>
                   </span>
                 </li>
               )
@@ -212,11 +233,39 @@ export function WorkspacePage({
             <ul className="violation-stack">
               {violations.map((item) => (
                 <li key={`${item.rule_id}-${item.field}`}>
-                  <strong>
-                    {item.rule_id} · {item.field} · {item.severity}
+		  <div className="violation-header">
+                   <strong>
+                    {item.rule_id} · {item.field}
                   </strong>
+
+
+		  <span className={`severity-badge severity-${item.severity}`}>
+                    {item.severity.toUpperCase()}
+                  </span>
+     		 </div>
+
                   <p>{item.message}</p>
-                  <p>{item.suggestion ?? ''}</p>
+
+                  {item.legal_reference && (
+                    <div className="rule-explanation">
+                      <strong>Legal Reference</strong>
+                      <span>{item.legal_reference}</span>
+                    </div>
+                  )}
+
+                  {item.explanation && (
+                    <div className="rule-explanation">
+                      <strong>Why this matters</strong>
+                      <span>{item.explanation}</span>
+                    </div>
+                  )}
+
+                  {item.suggestion && (
+                    <div className="rule-explanation">
+                      <strong>How to fix</strong>
+                      <span>{item.suggestion}</span>
+                    </div>
+                  )}
                 </li>
               ))}
             </ul>

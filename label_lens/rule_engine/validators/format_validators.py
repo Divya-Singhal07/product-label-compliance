@@ -415,6 +415,14 @@ def check_country_of_origin(
                     "Declare as 'Country of Origin: XXX' "
                     "or 'Made in XXX'"
                 ),
+                legal_reference=(
+                    "Legal Metrology (Packaged Commodities) Rules, 2011 "
+                    "— Rule 6(1)(aa)"
+                ),
+                explanation=(
+                    "For imported products, the package must declare the "
+                    "country of origin, manufacture or assembly."
+                ),
             )
         )
 
@@ -443,6 +451,15 @@ def check_manufacturer(
                     "Must include name and complete address"
                 ),
                 detected_value=mfr,
+                legal_reference=(
+                    "Legal Metrology (Packaged Commodities) Rules, 2011 "
+                    "— Rule 6(1)(a)"
+                ),
+                explanation=(
+                    "The package must declare the name and address of the "
+                    "manufacturer and, where applicable, the packer or importer. "
+                    "The extracted declaration appears incomplete."
+                ),
             )
         )
 

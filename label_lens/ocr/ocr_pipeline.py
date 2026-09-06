@@ -9,6 +9,7 @@ import logging
 from typing import Any, Dict, List, Optional
 
 from .field_extractor import extract_fields
+from .field_confidence import build_field_confidence
 from .llm_extractor import extract_fields_with_llm
 from .paddle_runner import run_ocr_on_candidates
 from .product_id import generate_product_id
@@ -97,12 +98,14 @@ class OCRProcessor:
             method = "rules"
 
         fields = self._normalize_fields(fields)
+        field_confidence = build_field_confidence(fields, ocr_lines)
 
         return {
             "view": preprocessed_result.get("view", "unknown"),
             "best_candidate": best_candidate,
             "ocr_lines": ocr_lines,
             "fields": fields,
+            "field_confidence": field_confidence,
             "extraction_method": method,
             "num_lines": len(ocr_lines),
             "quality_metrics": preprocessed_result.get("quality_metrics"),
@@ -135,20 +138,37 @@ class OCRProcessor:
         }
 
         merged = dict(FIELD_DEFAULTS)
+        field_confidence: Dict[str, float] = {}
 
         for field, views_order in priority.items():
             for view in views_order:
                 if view not in view_outputs:
                     continue
+
                 view_data = view_outputs[view]
+
                 if "fields" not in view_data:
                     continue
+
                 candidate = view_data["fields"].get(field)
+
                 if candidate is not None and candidate != "":
                     merged[field] = candidate
+
+                    confidence = view_data.get(
+                        "field_confidence",
+                        {},
+                    ).get(field)
+
+                    if confidence is not None:
+                        field_confidence[field] = confidence
+
                     break
 
-        return merged
+        return {
+            "fields": merged,
+            "field_confidence": field_confidence,
+        }
 
     def process_product(
         self,
@@ -170,7 +190,10 @@ class OCRProcessor:
                 logger.exception("OCR processing failed for view '%s'", view_name)
                 view_outputs[view_name] = {"error": str(e)}
 
-        merged_fields = self._merge_fields(view_outputs)
+        merged_result = self._merge_fields(view_outputs)
+
+        merged_fields = merged_result["fields"]
+        field_confidence = merged_result["field_confidence"]
 
         product_id = generate_product_id(
             brand=merged_fields.get("brand"),
@@ -183,6 +206,7 @@ class OCRProcessor:
             "product_folder": batch_result.get("product_folder"),
             "views": view_outputs,
             "merged_fields": merged_fields,
+            "field_confidence": field_confidence,
             "front_fields": view_outputs.get(front_view_name, {}).get("fields", {}),
             "ready_for_rule_engine": True,
         }

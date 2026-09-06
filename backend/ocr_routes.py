@@ -130,7 +130,10 @@ def _require_llm_extraction(ocr: OCRProcessor, final: Dict[str, Any]) -> List[st
             "No compliance score was generated."
         )
     if recovered_views:
-        final["merged_fields"] = ocr._merge_fields(views)
+        merged_result = ocr._merge_fields(views)
+        final["merged_fields"] = merged_result["fields"]
+        final["field_confidence"] = merged_result["field_confidence"]
+
         merged = final["merged_fields"]
         final["product_id"] = generate_product_id(
             brand=merged.get("brand"),
@@ -194,6 +197,7 @@ def _run_ocr_job(
             "product_id": final["product_id"],
             "product_folder": final["product_folder"],
             "merged_fields": merged_fields,
+            "field_confidence": final.get("field_confidence", {}),
             "compliance_result": comp_dict,
             "views": final.get("views", {}),
             "metadata": {"llm_retry_views": retried_views},

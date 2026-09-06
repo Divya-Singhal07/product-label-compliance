@@ -3,6 +3,56 @@ from typing import List
 from ..models import ExtractedFields, Violation, Severity
 
 
+# Legal references for mandatory packaged-commodity declarations.
+# References are based on Rule 6(1) of the Legal Metrology
+# (Packaged Commodities) Rules, 2011.
+
+LEGAL_METADATA = {
+    "manufacturer": {
+        "legal_reference": "Legal Metrology (Packaged Commodities) Rules, 2011 — Rule 6(1)(a)",
+        "explanation": (
+            "The package must declare the name and address of the "
+            "manufacturer and, where applicable, the packer or importer."
+        ),
+    },
+    "generic_name": {
+        "legal_reference": "Legal Metrology (Packaged Commodities) Rules, 2011 — Rule 6(1)(b)",
+        "explanation": (
+            "The package must state the common or generic name of the commodity "
+            "so that the nature of the product is clearly identifiable."
+        ),
+    },
+    "net_quantity": {
+        "legal_reference": "Legal Metrology (Packaged Commodities) Rules, 2011 — Rule 6(1)(c)",
+        "explanation": (
+            "The package must declare the net quantity of the commodity "
+            "in the prescribed unit of weight, measure or number."
+        ),
+    },
+    "mrp": {
+        "legal_reference": "Legal Metrology (Packaged Commodities) Rules, 2011 — Rule 6(1)(e)",
+        "explanation": (
+            "The package must declare the maximum retail price in the "
+            "prescribed manner, including applicable tax requirements."
+        ),
+    },
+    "consumer_care": {
+        "legal_reference": "Legal Metrology (Packaged Commodities) Rules, 2011 — Rule 6(1)(f)",
+        "explanation": (
+            "The package must provide the prescribed details for consumers "
+            "to contact the manufacturer, packer or importer regarding complaints."
+        ),
+    },
+    "country_of_origin": {
+        "legal_reference": "Legal Metrology (Packaged Commodities) Rules, 2011 — Rule 6(1)(aa)",
+        "explanation": (
+            "For imported products, the package must declare the country "
+            "of origin, manufacture or assembly."
+        ),
+    },
+}
+
+
 # Base mandatory fields for most retail packages
 BASE_MANDATORY = {
     "manufacturer": {
@@ -61,18 +111,32 @@ def check_mandatory_fields(
     # ---------------------------------------------------------
     # 1. Start with base mandatory fields
     # ---------------------------------------------------------
-    required = dict(BASE_MANDATORY)
+    required = {}
+
+    for field, conf in BASE_MANDATORY.items():
+        metadata = LEGAL_METADATA.get(field, {})
+        required[field] = {
+            **conf,
+            **metadata,
+        }
 
     # ---------------------------------------------------------
     # 2. Apply product/category-specific mandatory rules
     # ---------------------------------------------------------
     if product_rules and "mandatory" in product_rules:
         for field, conf in product_rules["mandatory"].items():
+            metadata = LEGAL_METADATA.get(field, {})
             required[field] = {
                 "severity": Severity(
                     conf.get("severity", "high")
                 ),
                 "label": conf.get("label", field),
+                **metadata,
+                **{
+                    key: conf[key]
+                    for key in ("legal_reference", "explanation")
+                    if key in conf
+                },
             }
 
     # ---------------------------------------------------------
@@ -108,6 +172,8 @@ def check_mandatory_fields(
                             "Manually verify the numeric MRP value on "
                             "the product label."
                         ),
+                        legal_reference=conf.get("legal_reference"),
+                        explanation=conf.get("explanation"),
                     )
                 )
             else:
@@ -124,6 +190,8 @@ def check_mandatory_fields(
                             f"Ensure '{conf['label']}' is clearly printed "
                             f"on the product label."
                         ),
+                        legal_reference=conf.get("legal_reference"),
+                        explanation=conf.get("explanation"),
                     )
                 )
 
@@ -144,6 +212,8 @@ def check_mandatory_fields(
                         f"Ensure '{conf['label']}' is clearly printed "
                         f"on the product label."
                     ),
+                    legal_reference=conf.get("legal_reference"),
+                    explanation=conf.get("explanation"),
                 )
             )
 
@@ -182,6 +252,8 @@ def check_mandatory_fields(
                         "This field is mandatory for the "
                         "given product type or condition."
                     ),
+                    legal_reference=conf.get("legal_reference"),
+                    explanation=conf.get("explanation"),
                 )
             )
 

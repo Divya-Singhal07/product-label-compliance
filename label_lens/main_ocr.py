@@ -222,6 +222,26 @@ def main():
         )
 
     # ---------------------------------------------------------
+    # 5B. Save field confidence separately
+    # ---------------------------------------------------------
+    confidence_path = (
+        product_folder
+        / "field_confidence.json"
+    )
+
+    with open(
+        confidence_path,
+        "w",
+        encoding="utf-8",
+    ) as f:
+        json.dump(
+            final.get("field_confidence", {}),
+            f,
+            indent=2,
+            ensure_ascii=False,
+        )
+
+    # ---------------------------------------------------------
     # 6. Confirm JSON was created
     # ---------------------------------------------------------
     print(

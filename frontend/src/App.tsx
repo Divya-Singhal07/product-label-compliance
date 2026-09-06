@@ -15,6 +15,7 @@ function App() {
   const [authChecked, setAuthChecked] = useState(false)
   const [workspaceView, setWorkspaceView] = useState<WorkspaceView>('scan')
   const [files, setFiles] = useState<Partial<Record<LabelView, File>>>({})
+  const [fieldConfidence, setFieldConfidence] = useState<Record<string, number>>({})
   const [isProcessing, setIsProcessing] = useState(false)
   const [fields, setFields] = useState<MergedFields | null>(null)
   const [result, setResult] = useState<ComplianceResult | null>(null)
@@ -79,6 +80,7 @@ function App() {
     try {
       const response = await analyzeProduct({ views: files })
       setFields(response.merged_fields)
+      setFieldConfidence(response.field_confidence)
       setResult(response.compliance_result ?? null)
       setJobId(response.job_id)
       setWorkspaceView('result')
@@ -118,6 +120,7 @@ function App() {
           isProcessing={isProcessing}
           fields={fields}
           result={result}
+	  fieldConfidence={fieldConfidence}
           jobId={jobId}
           onSelect={(view, file) =>
             setFiles((current) => ({ ...current, [view]: file }))

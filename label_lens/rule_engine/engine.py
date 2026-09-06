@@ -626,6 +626,12 @@ class RuleEngine:
         suggestion = check.get(
             "suggestion"
         )
+        legal_reference = check.get(
+            "legal_reference"
+        )
+        explanation = check.get(
+            "explanation"
+        )
 
         # --------------------------------------------------------
         # Get field value
@@ -658,6 +664,8 @@ class RuleEngine:
                         message=message,
                         severity=severity,
                         suggestion=suggestion,
+                        legal_reference=legal_reference,
+                        explanation=explanation,
                         layer=layer,
                     )
                 ]
@@ -683,6 +691,8 @@ class RuleEngine:
                         message=message,
                         severity=severity,
                         suggestion=suggestion,
+                        legal_reference=legal_reference,
+                        explanation=explanation,
                         layer=layer,
                     )
                 ]
@@ -713,6 +723,8 @@ class RuleEngine:
                         message=message,
                         severity=severity,
                         suggestion=suggestion,
+                        legal_reference=legal_reference,
+                        explanation=explanation,
                         layer=layer,
                     )
                 ]
@@ -734,6 +746,8 @@ class RuleEngine:
                         message=message,
                         severity=severity,
                         suggestion=suggestion,
+                        legal_reference=legal_reference,
+                        explanation=explanation,
                         layer=layer,
                     )
                 ]

@@ -1,0 +1,25 @@
+
+.rule-explanation {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.rule-explanation strong {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #475569;
+}
+
+.rule-explanation span {
+  font-size: 13px;
+  line-height: 1.5;
+  color: #334155;
+}

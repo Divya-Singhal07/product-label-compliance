@@ -50,6 +50,8 @@ export interface Violation {
   detected_value: string | null
   expected: string | null
   layer: string | null
+  legal_reference: string | null
+  explanation: string | null
 }
 
 export interface ComplianceResult {
@@ -71,6 +73,7 @@ export interface AnalyzeResponse {
   product_id: string
   product_folder: string
   merged_fields: MergedFields
+  field_confidence: Record<string, number>
   compliance_result: ComplianceResult | null
   views: Record<string, unknown>
   metadata: Record<string, unknown>
