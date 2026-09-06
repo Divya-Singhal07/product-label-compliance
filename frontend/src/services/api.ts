@@ -185,7 +185,7 @@ async function pollForResult(jobId: string): Promise<AnalyzeResponse> {
   )
 }
 
-export async function analyzeProduct(input: AnalyzeProductInput): Promise<AnalyzeResponse> {
+export async function analyzeProduct(input: AnalyzeProductInput): Promise<AnalyzeResponse & { job_id: string }> {
   const uploads = collectUploads(input.views)
   const formData = new FormData()
   const viewNames: LabelView[] = []
@@ -216,7 +216,8 @@ export async function analyzeProduct(input: AnalyzeProductInput): Promise<Analyz
     throw new ApiError('Server did not return a job id.', response.status)
   }
 
-  return pollForResult(jobId)
+  const result = await pollForResult(jobId)
+  return { ...result, job_id: jobId }
 }
 
 export interface InspectionRecord {
