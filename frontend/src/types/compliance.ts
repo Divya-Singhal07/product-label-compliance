@@ -1,13 +1,3 @@
-/**
- * Shared TypeScript contracts aligned with the existing Python models.
- *
- * Sources:
- * - label_lens/rule_engine/models.py (Severity, Violation, ComplianceResult)
- * - label_lens/ocr/ocr_pipeline.py FIELD_DEFAULTS / LLM schema (MergedFields)
- *
- * Do not add backend fields that are not already identified in those models.
- */
-
 export type Severity = 'high' | 'medium' | 'low' | 'info'
 
 export type ProductTypeExtractor =
@@ -68,18 +58,29 @@ export interface ComplianceResult {
   layers_applied: string[]
 }
 
+export interface AIFixSuggestion {
+  rule_id: string
+  field: string
+  ai_fix: string
+  example: string | null
+  confidence: number
+}
+
 /** Combined payload returned by the backend OCR job result endpoint. */
+
 export interface AnalyzeResponse {
   product_id: string
   product_folder: string
   merged_fields: MergedFields
   field_confidence: Record<string, number>
+  ai_fix_suggestions: AIFixSuggestion[]
   compliance_result: ComplianceResult | null
   views: Record<string, unknown>
   metadata: Record<string, unknown>
 }
 
 /** Local UI helper for scan-history rows. Not a backend model. */
+
 export interface ScanHistoryRow {
   id: string
   product: string
