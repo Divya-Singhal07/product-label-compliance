@@ -128,11 +128,27 @@ EXTRACTION RULES:
 - Examples may include "₹/kg", "₹/L", or an explicitly printed unit price.
 
 8. MANUFACTURER ADDRESS
-- Extract the complete manufacturer name and address when present.
+
+- Extract the complete manufacturer name and address when explicitly stated.
+- Look for declarations such as "Manufactured by", "Manufactured at",
+  "Mfg. by", "Manufacturer", or equivalent wording.
+- If the label explicitly refers to a "manufacturer/packer address" and
+  provides an address block, treat that address as manufacturer/packer
+  address evidence even if the exact role is not separately identified.
 - Preserve the address as accurately as possible.
+- Do not assume that a company labeled only "Marketed by" is the manufacturer.
 
 9. PACKER / IMPORTER
-- Extract separately when explicitly present.
+
+- Extract the packer separately when explicitly identified by wording such as
+  "Packed by", "Packer", or equivalent wording.
+- Extract the importer separately when explicitly identified by wording such as
+  "Imported by", "Importer", or equivalent wording.
+- A "Marketed by" declaration should NOT automatically be classified as
+  manufacturer or packer.
+- If a label provides a shared "manufacturer/packer address" but does not
+  identify which role applies, preserve the address as manufacturer_address
+  evidence rather than inventing a specific role.
 
 10. CONSUMER CARE
 - Extract phone number, email address, website, or consumer-care contact
@@ -245,6 +261,115 @@ def _message_text(response: Any) -> str:
     return ""
 
 
+def _normalize_unit_sale_price(current_value: Any, ocr_text: str) -> Any:
+    current = str(current_value or "").strip()
+
+    if not current or not re.fullmatch(r"\d+(?:\.\d+)?", current):
+        return current_value
+
+    text = re.sub(r"\s+", " ", str(ocr_text or "")).strip()
+
+    patterns = [
+        r"\bUSP\b\s*.*?(?:per|/)\s*(kg|kgs|g|gm|gms|l|ltr|litre|litres|ml)\b\s*(?:[:\-]?\s*)(\d+(?:\.\d+)?)",
+        r"\bunit\s+sale\s+price\b.*?(?:₹|rs\.?|inr)?\s*(\d+(?:\.\d+)?)\s*(?:per|/)\s*(kg|kgs|g|gm|gms|l|ltr|litre|litres|ml)\b",
+        r"(₹|rs\.?|inr)\s*(\d+(?:\.\d+)?)\s*(?:per|/)\s*(kg|kgs|g|gm|gms|l|ltr|litre|litres|ml)\b",
+    ]
+
+    unit_map = {
+        "kgs": "kg",
+        "gm": "g",
+        "gms": "g",
+        "litre": "L",
+        "litres": "L",
+        "l": "L",
+        "ltr": "L",
+        "ml": "ml",
+    }
+
+    for pattern in patterns:
+        match = re.search(pattern, text, re.IGNORECASE)
+        if not match:
+            continue
+
+        groups = match.groups()
+
+        if len(groups) == 2 and groups[0].lower() in unit_map:
+            unit = unit_map[groups[0].lower()]
+            price = groups[1]
+            return f"₹{price} per {unit}"
+
+        if len(groups) == 3:
+            currency = "₹" if groups[0] == "₹" else groups[0]
+            price = groups[1]
+            unit = unit_map.get(groups[2].lower(), groups[2])
+            return f"{currency} {price} per {unit}"
+
+    return current_value
+
+
+def _normalize_mrp(current_value: Any, ocr_text: str) -> Any:
+    """
+    Recover a complete MRP declaration from OCR when the LLM returns
+    only the numeric price.
+
+    Example OCR:
+        M.R.P
+        (Inclusive of all the taxes)
+        169.00
+
+    Result:
+        MRP ₹169.00 (Inclusive of all taxes)
+    """
+
+    current = str(current_value or "").strip()
+
+    if not current or not re.fullmatch(r"\d+(?:\.\d+)?", current):
+        return current_value
+
+    text = re.sub(r"\s+", " ", str(ocr_text or "")).strip()
+
+    if not text:
+        return current_value
+
+    # Find an explicit MRP declaration and its nearby numeric value.
+    mrp_pattern = (
+        r"\bM\s*\.?\s*R\s*\.?\s*P\b"
+        r".{0,120}?"
+        r"(\d+(?:\.\d+)?)"
+    )
+
+    match = re.search(mrp_pattern, text, re.IGNORECASE)
+
+    if not match:
+        return current_value
+
+    price = match.group(1)
+    context = match.group(0)
+
+    # The current product explicitly contains the inclusive-tax declaration.
+    if re.search(
+        r"inclusive\s+of\s+(?:all\s+)?(?:the\s+)?taxes|"
+        r"incl\.?\s+of\s+(?:all\s+)?taxes",
+        context,
+        re.IGNORECASE,
+    ):
+        return f"MRP ₹{price} (Inclusive of all taxes)"
+
+    # Detect an explicitly printed currency indicator near the MRP.
+    currency_match = re.search(
+        r"(₹|rs\.?|inr|rupee)",
+        context,
+        re.IGNORECASE,
+    )
+
+    if currency_match:
+        currency = "₹" if currency_match.group(1) == "₹" else currency_match.group(1)
+        return f"MRP {currency} {price}"
+
+    # MRP is explicit but no currency marker was detected.
+    return f"MRP {price}"
+
+
 def extract_fields_with_llm(
     ocr_lines: List[Dict[str, Any]],
     api_key: Optional[str] = None,
@@ -340,6 +465,16 @@ def extract_fields_with_llm(
                 logger.warning("=== RAW LLM OUTPUT (model=%s) ===\n%s\n=== END ===", model, raw[:1500] if raw else "<EMPTY>")
                 parsed = _parse_json_content(raw)
                 fields = parsed
+
+                fields["mrp"] = _normalize_mrp(
+                    fields.get("mrp"),
+                    ocr_text,
+                )
+
+                fields["unit_sale_price"] = _normalize_unit_sale_price(
+                    fields.get("unit_sale_price"),
+                    ocr_text,
+                )
                 if model != preferred or response_format is None:
                     logger.info(
                         "LLM extraction succeeded with model=%s json_mode=%s",

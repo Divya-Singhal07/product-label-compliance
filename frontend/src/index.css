@@ -1149,3 +1149,139 @@ ol {
   }
 }
 
+
+/* Visual field inspection */
+
+.visual-inspection {
+  margin-top: 4rem;
+  padding-top: 2rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+.visual-inspection-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 2rem;
+  margin-bottom: 1.5rem;
+}
+
+.visual-inspection-heading h2 {
+  margin: 0.25rem 0 0;
+}
+
+.visual-inspection-heading > p {
+  max-width: 34rem;
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  opacity: 0.7;
+}
+
+.visual-inspection-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.25rem;
+}
+
+.visual-inspection-card {
+  min-width: 0;
+  border: 1px solid rgba(0, 0, 0, 0.14);
+  background: #fff;
+}
+
+.visual-inspection-card header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.9rem 1rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.visual-inspection-card h3 {
+  margin: 0.15rem 0 0;
+  font-size: 1rem;
+}
+
+.visual-view-kicker {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  opacity: 0.55;
+}
+
+.visual-box-count {
+  white-space: nowrap;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  opacity: 0.65;
+}
+
+.visual-box-container {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  background: #f3f3f3;
+  line-height: 0;
+}
+
+.visual-box-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.visual-field-polygon {
+  fill: rgba(255, 193, 7, 0.08);
+  stroke: rgba(255, 193, 7, 0.95);
+  stroke-width: 3;
+  vector-effect: non-scaling-stroke;
+}
+
+.visual-field-label-svg {
+  font-family: Arial, sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  fill: #111;
+  stroke: #fff;
+  stroke-width: 4px;
+  paint-order: stroke;
+  text-transform: uppercase;
+}
+
+.visual-box-legend {
+  position: absolute;
+  left: 0.75rem;
+  right: 0.75rem;
+  bottom: 0.75rem;
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.55rem 0.7rem;
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  font-size: 0.72rem;
+  line-height: 1.2;
+}
+
+.visual-confidence {
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  opacity: 0.65;
+}
+
+@media (max-width: 800px) {
+  .visual-inspection-heading {
+    display: block;
+  }
+
+  .visual-inspection-heading > p {
+    margin-top: 0.75rem;
+  }
+
+  .visual-inspection-grid {
+    grid-template-columns: 1fr;
+  }
+}

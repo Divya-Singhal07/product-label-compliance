@@ -214,8 +214,11 @@ def main():
         encoding="utf-8",
     ) as f:
 
+        structured_output = dict(final["merged_fields"])
+        structured_output["raw_text"] = final.get("raw_text", "")
+
         json.dump(
-            final["merged_fields"],
+            structured_output,
             f,
             indent=2,
             ensure_ascii=False,

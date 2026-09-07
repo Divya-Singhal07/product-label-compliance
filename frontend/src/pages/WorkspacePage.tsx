@@ -1,11 +1,13 @@
 import { AccountMenu } from '../components/auth/AccountMenu'
 import { UploadSlot } from '../components/workspace/UploadSlot'
+import { VisualBoxOverlay } from '../components/workspace/VisualBoxOverlay'
 import type { LabelView } from '../types/app'
 import type { User } from '../types/auth'
 import type {
   AIFixSuggestion,
   ComplianceResult,
   MergedFields,
+  VisualBoxes,
   Violation,
 } from '../types/compliance'
 
@@ -41,6 +43,7 @@ interface WorkspacePageProps {
   isProcessing: boolean
   fields: MergedFields | null
   fieldConfidence: Record<string, number>
+  visualBoxes: VisualBoxes
   result: ComplianceResult | null
   aiFixSuggestions: AIFixSuggestion[]
   jobId: string | null
@@ -60,6 +63,7 @@ export function WorkspacePage({
   isProcessing,
   fields,
   fieldConfidence,
+  visualBoxes,
   result,
   aiFixSuggestions,
   jobId,
@@ -201,6 +205,53 @@ export function WorkspacePage({
           {result?.needs_manual_review ? (
             <p className="caution-line">Manual review required</p>
           ) : null}
+
+          <section className="visual-inspection">
+            <div className="visual-inspection-heading">
+              <div>
+                <p className="section-index">Visual verification</p>
+                <h2>Detected label fields</h2>
+              </div>
+              <p>
+                Highlighted regions show where the OCR engine found the
+                extracted fields on the original product images.
+              </p>
+            </div>
+
+            <div className="visual-inspection-grid">
+              {SLOTS.map((slot) => {
+                const previewUrl = previewUrls[slot.view]
+                const boxes = visualBoxes[slot.view] ?? {}
+
+                if (!previewUrl) return null
+
+                return (
+                  <article
+                    key={slot.view}
+                    className="visual-inspection-card"
+                  >
+                    <header>
+                      <div>
+                        <span className="visual-view-kicker">
+                          {slot.title}
+                        </span>
+                        <h3>{slot.title} label</h3>
+                      </div>
+
+                      <span className="visual-box-count">
+                        {Object.keys(boxes).length} detected
+                      </span>
+                    </header>
+
+                    <VisualBoxOverlay
+                      src={previewUrl}
+                      boxes={boxes}
+                    />
+                  </article>
+                )
+              })}
+            </div>
+          </section>
 
           <h2>Extracted fields</h2>
 

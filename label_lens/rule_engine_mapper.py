@@ -325,4 +325,7 @@ def map_to_rule_engine(llm_fields: Dict[str, Any]) -> Dict[str, Any]:
         "is_electronic": is_electronic,
         "is_imported": is_imported,
         "has_shelf_life": has_shelf_life,
+
+        # Preserve the complete OCR evidence for downstream rule validation.
+        "raw_text": llm_fields.get("raw_text"),
     }

@@ -9,7 +9,7 @@ import logging
 from typing import Any, Dict, List, Optional
 
 from .field_extractor import extract_fields
-from .field_confidence import build_field_confidence
+from .field_confidence import build_field_confidence, build_field_boxes
 from .llm_extractor import extract_fields_with_llm
 from .paddle_runner import run_ocr_on_candidates
 from .product_id import generate_product_id
@@ -74,13 +74,122 @@ class OCRProcessor:
 
         return normalized
 
+    @staticmethod
+    def _map_field_boxes_to_original(
+        field_boxes: Dict[str, Dict[str, Any]],
+        preprocessed_result: Dict[str, Any],
+    ) -> Dict[str, Dict[str, Any]]:
+        """
+        Map OCR coordinates from the processed image back to the
+        original uploaded image coordinates.
+        """
+
+        original = preprocessed_result.get("original_dimensions", {})
+        processed = preprocessed_result.get("processed_dimensions", {})
+
+        original_width = float(original.get("width", 0) or 0)
+        original_height = float(original.get("height", 0) or 0)
+        processed_width = float(processed.get("width", 0) or 0)
+        processed_height = float(processed.get("height", 0) or 0)
+
+        if (
+            original_width <= 0
+            or original_height <= 0
+            or processed_width <= 0
+            or processed_height <= 0
+        ):
+            return field_boxes
+
+        scale_x = original_width / processed_width
+        scale_y = original_height / processed_height
+
+        mapped: Dict[str, Dict[str, Any]] = {}
+
+        for field, data in field_boxes.items():
+            item = dict(data)
+
+            polygon = item.get("polygon")
+            if polygon:
+                mapped_polygon = []
+
+                for point in polygon:
+                    if len(point) < 2:
+                        continue
+
+                    x = max(
+                        0.0,
+                        min(
+                            original_width,
+                            float(point[0]) * scale_x,
+                        ),
+                    )
+                    y = max(
+                        0.0,
+                        min(
+                            original_height,
+                            float(point[1]) * scale_y,
+                        ),
+                    )
+
+                    mapped_polygon.append(
+                        [
+                            round(x, 2),
+                            round(y, 2),
+                        ]
+                    )
+
+                item["polygon"] = mapped_polygon
+
+                if mapped_polygon:
+                    xs = [point[0] for point in mapped_polygon]
+                    ys = [point[1] for point in mapped_polygon]
+
+                    item["box"] = [
+                        round(min(xs), 2),
+                        round(min(ys), 2),
+                        round(max(xs), 2),
+                        round(max(ys), 2),
+                    ]
+
+            elif item.get("box"):
+                box = item["box"]
+
+                if len(box) == 4:
+                    x1 = max(
+                        0.0,
+                        min(original_width, float(box[0]) * scale_x),
+                    )
+                    y1 = max(
+                        0.0,
+                        min(original_height, float(box[1]) * scale_y),
+                    )
+                    x2 = max(
+                        0.0,
+                        min(original_width, float(box[2]) * scale_x),
+                    )
+                    y2 = max(
+                        0.0,
+                        min(original_height, float(box[3]) * scale_y),
+                    )
+
+                    item["box"] = [
+                        round(x1, 2),
+                        round(y1, 2),
+                        round(x2, 2),
+                        round(y2, 2),
+                    ]
+
+            mapped[field] = item
+
+        return mapped
+
     def process_view(self, preprocessed_result: Dict[str, Any], use_llm: bool = True) -> Dict[str, Any]:
         candidates = preprocessed_result.get("images", {})
 
         if not candidates:
             raise ValueError("No preprocessed images found in result")
 
-        ocr_lines, best_candidate = run_ocr_on_candidates(
+        ocr_lines, visual_ocr_lines, best_candidate = run_ocr_on_candidates(
             candidates,
             preferred_order=self.preferred_candidates,
         )
@@ -99,6 +208,11 @@ class OCRProcessor:
 
         fields = self._normalize_fields(fields)
         field_confidence = build_field_confidence(fields, ocr_lines)
+        field_boxes = build_field_boxes(fields, visual_ocr_lines)
+        field_boxes = self._map_field_boxes_to_original(
+            field_boxes,
+            preprocessed_result,
+        )
 
         return {
             "view": preprocessed_result.get("view", "unknown"),
@@ -106,6 +220,7 @@ class OCRProcessor:
             "ocr_lines": ocr_lines,
             "fields": fields,
             "field_confidence": field_confidence,
+            "field_boxes": field_boxes,
             "extraction_method": method,
             "num_lines": len(ocr_lines),
             "quality_metrics": preprocessed_result.get("quality_metrics"),
@@ -195,6 +310,21 @@ class OCRProcessor:
         merged_fields = merged_result["fields"]
         field_confidence = merged_result["field_confidence"]
 
+        # Preserve the OCR evidence from all product views so downstream
+        # rule validation can distinguish missing declarations from
+        # information that is only referenced elsewhere (for example QR codes).
+        raw_text_parts = []
+
+        for view_name, view_data in view_outputs.items():
+            for line in view_data.get("ocr_lines", []):
+                line_text = str(line.get("text", "") or "").strip()
+                if line_text:
+                    raw_text_parts.append(
+                        f"[{view_name}] {line_text}"
+                    )
+
+        raw_text = "\n".join(raw_text_parts)
+
         product_id = generate_product_id(
             brand=merged_fields.get("brand"),
             product_name=merged_fields.get("product_name"),
@@ -207,6 +337,7 @@ class OCRProcessor:
             "views": view_outputs,
             "merged_fields": merged_fields,
             "field_confidence": field_confidence,
+            "raw_text": raw_text,
             "front_fields": view_outputs.get(front_view_name, {}).get("fields", {}),
             "ready_for_rule_engine": True,
         }

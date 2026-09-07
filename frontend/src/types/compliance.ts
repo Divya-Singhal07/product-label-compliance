@@ -68,11 +68,25 @@ export interface AIFixSuggestion {
 
 /** Combined payload returned by the backend OCR job result endpoint. */
 
+export interface VisualBox {
+  field: string
+  text: string
+  confidence: number
+  similarity: number
+  ocr_confidence: number
+  box: [number, number, number, number] | null
+  polygon: [number, number][]
+  orientation: string
+}
+
+export type VisualBoxes = Record<string, Record<string, VisualBox>>
+
 export interface AnalyzeResponse {
   product_id: string
   product_folder: string
   merged_fields: MergedFields
   field_confidence: Record<string, number>
+  visual_boxes: VisualBoxes
   ai_fix_suggestions: AIFixSuggestion[]
   compliance_result: ComplianceResult | null
   views: Record<string, unknown>

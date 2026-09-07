@@ -437,6 +437,10 @@ def check_manufacturer(
 
     mfr = data.manufacturer or ""
 
+    # Missing manufacturer is handled by PRESENCE_MANUFACTURER.
+    # MFR_001 is only for a declaration that exists but is incomplete.
+    if not mfr.strip():
+        return violations
     if len(mfr.strip()) < 10:
         violations.append(
             Violation(

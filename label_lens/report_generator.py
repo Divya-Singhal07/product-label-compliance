@@ -66,7 +66,18 @@ def safe(value):
 # PDF GENERATOR
 # ------------------------------------------------------------
 
-def generate_report(structured, compliance, output_path):
+def generate_report(
+    structured,
+    compliance,
+    output_path,
+    field_confidence=None,
+    ai_fix_suggestions=None,
+    visual_boxes=None,
+):
+
+    field_confidence = field_confidence or {}
+    ai_fix_suggestions = ai_fix_suggestions or []
+    visual_boxes = visual_boxes or {}
 
     styles = getSampleStyleSheet()
 
@@ -412,6 +423,107 @@ def generate_report(structured, compliance, output_path):
     story.append(checklist_table)
 
     # --------------------------------------------------------
+    # FIELD CONFIDENCE
+    # --------------------------------------------------------
+
+    story.append(
+        Paragraph(
+            "4. Field Confidence",
+            section_style,
+        )
+    )
+
+    confidence_fields = [
+        ("Brand", "brand"),
+        ("Product Name", "product_name"),
+        ("Generic / Common Name", "generic_name"),
+        ("Net Quantity", "net_quantity"),
+        ("MRP", "mrp"),
+        ("Unit Sale Price", "unit_sale_price"),
+        ("Manufacturer Address", "manufacturer_address"),
+        ("Packer", "packer"),
+        ("Importer", "importer"),
+        ("Consumer Care", "consumer_care"),
+        ("Manufacturing Date", "mfg_date"),
+        ("Best Before", "best_before"),
+        ("Use By / Expiry", "use_by"),
+        ("Country of Origin", "country_of_origin"),
+    ]
+
+    confidence_table_data = [
+        [
+            Paragraph("FIELD", table_header_style),
+            Paragraph("CONFIDENCE", table_header_style),
+            Paragraph("LEVEL", table_header_style),
+        ]
+    ]
+
+    for label, field in confidence_fields:
+        value = field_confidence.get(field)
+
+        if value is None:
+            confidence_text = "Not available"
+            level_text = "N/A"
+            level_color = colors.HexColor("#6B7280")
+        else:
+            try:
+                confidence_value = float(value)
+                confidence_text = f"{confidence_value * 100:.0f}%"
+
+                if confidence_value >= 0.90:
+                    level_text = "HIGH"
+                    level_color = colors.HexColor("#15803D")
+                elif confidence_value >= 0.70:
+                    level_text = "MEDIUM"
+                    level_color = colors.HexColor("#C2410C")
+                else:
+                    level_text = "LOW"
+                    level_color = colors.HexColor("#B91C1C")
+            except (TypeError, ValueError):
+                confidence_text = "Not available"
+                level_text = "N/A"
+                level_color = colors.HexColor("#6B7280")
+
+        confidence_status_style = ParagraphStyle(
+            f"Confidence_{field}",
+            parent=table_cell_style,
+            fontName="Helvetica-Bold",
+            textColor=level_color,
+        )
+
+        confidence_table_data.append(
+            [
+                Paragraph(label, table_cell_style),
+                Paragraph(confidence_text, table_cell_style),
+                Paragraph(level_text, confidence_status_style),
+            ]
+        )
+
+    confidence_table = Table(
+        confidence_table_data,
+        colWidths=[82 * mm, 48 * mm, 50 * mm],
+        repeatRows=1,
+    )
+
+    confidence_table.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, 0),
+                 colors.HexColor("#111827")),
+                ("GRID", (0, 0), (-1, -1), 0.5,
+                 colors.HexColor("#D1D5DB")),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("LEFTPADDING", (0, 0), (-1, -1), 5),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 5),
+                ("TOPPADDING", (0, 0), (-1, -1), 5),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+            ]
+        )
+    )
+
+    story.append(confidence_table)
+
+    # --------------------------------------------------------
     # VIOLATIONS
     # --------------------------------------------------------
 
@@ -560,12 +672,131 @@ def generate_report(structured, compliance, output_path):
             )
 
     # --------------------------------------------------------
+    # AI FIX SUGGESTIONS
+    # --------------------------------------------------------
+
+    story.append(
+        Paragraph(
+            "5. AI Fix Suggestions",
+            section_style,
+        )
+    )
+
+    if not ai_fix_suggestions:
+        story.append(
+            Paragraph(
+                "No AI fix suggestions generated.",
+                normal_style,
+            )
+        )
+    else:
+        for index, item in enumerate(ai_fix_suggestions, start=1):
+            rule_id = safe(item.get("rule_id"))
+            field = safe(item.get("field")).upper()
+            ai_fix = safe(item.get("ai_fix"))
+            example = safe(item.get("example"))
+            confidence = item.get("confidence")
+
+            if confidence is not None:
+                try:
+                    confidence_text = f"{float(confidence) * 100:.0f}%"
+                except (TypeError, ValueError):
+                    confidence_text = "Not available"
+            else:
+                confidence_text = "Not available"
+
+            suggestion_content = [
+                [
+                    Paragraph(
+                        f"<b>{index}. {rule_id} — {field}</b>",
+                        violation_title_style,
+                    )
+                ],
+                [
+                    Paragraph(
+                        f"<b>AI Recommendation:</b> {ai_fix}",
+                        normal_style,
+                    )
+                ],
+                [
+                    Paragraph(
+                        f"<b>Suggested Example:</b> {example}",
+                        normal_style,
+                    )
+                ],
+                [
+                    Paragraph(
+                        f"<b>AI Confidence:</b> {confidence_text}",
+                        normal_style,
+                    )
+                ],
+            ]
+
+            suggestion_table = Table(
+                suggestion_content,
+                colWidths=[180 * mm],
+            )
+
+            suggestion_table.setStyle(
+                TableStyle(
+                    [
+                        (
+                            "BACKGROUND",
+                            (0, 0),
+                            (-1, 0),
+                            colors.HexColor("#F3F4F6"),
+                        ),
+                        (
+                            "BOX",
+                            (0, 0),
+                            (-1, -1),
+                            0.8,
+                            colors.HexColor("#D1D5DB"),
+                        ),
+                        (
+                            "LEFTPADDING",
+                            (0, 0),
+                            (-1, -1),
+                            7,
+                        ),
+                        (
+                            "RIGHTPADDING",
+                            (0, 0),
+                            (-1, -1),
+                            7,
+                        ),
+                        (
+                            "TOPPADDING",
+                            (0, 0),
+                            (-1, -1),
+                            6,
+                        ),
+                        (
+                            "BOTTOMPADDING",
+                            (0, 0),
+                            (-1, -1),
+                            6,
+                        ),
+                    ]
+                )
+            )
+
+            story.append(
+                KeepTogether(
+                    [
+                        suggestion_table,
+                        Spacer(1, 3 * mm),
+                    ]
+                )
+            )
+
+    # --------------------------------------------------------
     # WARNINGS
     # --------------------------------------------------------
 
     story.append(
         Paragraph(
-            "5. Warnings",
+            "6. Warnings",
             section_style,
         )
     )
@@ -594,7 +825,7 @@ def generate_report(structured, compliance, output_path):
 
     story.append(
         Paragraph(
-            "6. Manual Review",
+            "7. Manual Review",
             section_style,
         )
     )
@@ -626,7 +857,7 @@ def generate_report(structured, compliance, output_path):
 
     story.append(
         Paragraph(
-            "7. Rule Engine Information",
+            "8. Rule Engine Information",
             section_style,
         )
     )

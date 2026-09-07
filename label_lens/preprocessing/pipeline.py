@@ -162,9 +162,20 @@ class PackageImagePreprocessor:
             candidate_sharpened = sharpen_image(candidate_enhanced, amount=self.sharpen_amount)
             self._save_debug(candidate_sharpened, "10_sharpened", view_dir)
 
+        original_height, original_width = self._load_and_validate(image_path).shape[:2]
+        processed_height, processed_width = base.shape[:2]
+
         result = {
             "view": view_name,
             "source_path": str(image_path),
+            "original_dimensions": {
+                "width": int(original_width),
+                "height": int(original_height),
+            },
+            "processed_dimensions": {
+                "width": int(processed_width),
+                "height": int(processed_height),
+            },
             "quality_metrics": quality,
             "rotation_angle": round(rotation_angle, 3),
             "glare_detected": glare_detected,

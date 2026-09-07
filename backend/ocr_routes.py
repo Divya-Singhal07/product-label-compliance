@@ -290,7 +290,10 @@ def _run_ocr_job(
             final,
         )
 
-        merged_fields = final["merged_fields"]
+        merged_fields = dict(final["merged_fields"])
+
+        # Preserve complete OCR evidence for the rule engine.
+        merged_fields["raw_text"] = final.get("raw_text", "")
 
         logger.info(
             "OCR job %s extracted merged fields: %s",
@@ -408,10 +411,17 @@ def _run_ocr_job(
 
         _JOBS[job_id]["status"] = "completed"
 
+        visual_boxes = {
+            view_name: view_data.get("field_boxes", {})
+            for view_name, view_data in final.get("views", {}).items()
+            if isinstance(view_data, dict)
+        }
+
         _JOBS[job_id]["result"] = {
             "product_id": final["product_id"],
             "product_folder": final["product_folder"],
             "merged_fields": merged_fields,
+            "visual_boxes": visual_boxes,
             "field_confidence": final.get(
                 "field_confidence",
                 {},
@@ -905,6 +915,21 @@ async def download_compliance_pdf(
         {},
     )
 
+    field_confidence = result.get(
+        "field_confidence",
+        {},
+    )
+
+    ai_fix_suggestions = result.get(
+        "ai_fix_suggestions",
+        [],
+    )
+
+    visual_boxes = result.get(
+        "visual_boxes",
+        {},
+    )
+
     if not compliance:
 
         raise HTTPException(
@@ -927,6 +952,9 @@ async def download_compliance_pdf(
             structured=merged_fields,
             compliance=compliance,
             output_path=pdf_path,
+            field_confidence=field_confidence,
+            ai_fix_suggestions=ai_fix_suggestions,
+            visual_boxes=visual_boxes,
         )
 
         return FileResponse(
