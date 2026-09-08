@@ -10,11 +10,24 @@ from typing import List, Optional, Dict, Any, Union, cast
 
 from fastapi import APIRouter, Depends, File, UploadFile, Form, HTTPException, status
 from fastapi.responses import JSONResponse, FileResponse
+from starlette.requests import Request
 
 try:
-    from .deps import get_current_user, supabase_client
+    from .deps import (
+        ACCESS_COOKIE,
+        REFRESH_COOKIE,
+        get_current_user,
+        supabase_client,
+        supabase_client_with_session,
+    )
 except ImportError:
-    from deps import get_current_user, supabase_client
+    from deps import (
+        ACCESS_COOKIE,
+        REFRESH_COOKIE,
+        get_current_user,
+        supabase_client,
+        supabase_client_with_session,
+    )
 
 from label_lens.preprocessing.pipeline import PackageImagePreprocessor
 from label_lens.ocr.ocr_pipeline import OCRProcessor
@@ -549,7 +562,10 @@ def _run_ocr_job(
                     ),
                 }
 
-                supabase_client() \
+                supabase_client_with_session(
+                    officer_info.get("supabase_access_token"),
+                    officer_info.get("supabase_refresh_token"),
+                ) \
                     .table("inspection_records") \
                     .insert(record) \
                     .execute()
@@ -581,6 +597,7 @@ def _run_ocr_job(
     status_code=status.HTTP_202_ACCEPTED,
 )
 async def create_job(
+    request: Request,
     files: List[UploadFile] = File(...),
     view_names: Optional[str] = Form(None),
     product_id: Optional[str] = Form(None),
@@ -692,6 +709,13 @@ async def create_job(
         timezone.utc
     ).isoformat()
 
+    supabase_access_token = request.cookies.get(
+        ACCESS_COOKIE
+    )
+    supabase_refresh_token = request.cookies.get(
+        REFRESH_COOKIE
+    )
+
     user_metadata = (
         getattr(
             user,
@@ -707,6 +731,8 @@ async def create_job(
     )
 
     officer_info = {
+        "supabase_access_token": supabase_access_token,
+        "supabase_refresh_token": supabase_refresh_token,
         "officer_user_id": getattr(
             user,
             "id",

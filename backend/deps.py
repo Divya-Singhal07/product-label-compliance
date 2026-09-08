@@ -32,13 +32,39 @@ ACCESS_COOKIE = "sb_access_token"
 REFRESH_COOKIE = "sb_refresh_token"
 
 
-def supabase_client() -> Client:
+def supabase_client(
+    access_token: str | None = None,
+    refresh_token: str | None = None,
+) -> Client:
     _load_runtime_config()
     supabase_url = os.environ.get("SUPABASE_URL", "")
     supabase_key = os.environ.get("SUPABASE_KEY", "")
     if not supabase_url or not supabase_key:
         raise RuntimeError("Set SUPABASE_URL and SUPABASE_KEY in backend/.env")
-    return create_client(supabase_url, supabase_key)
+
+    client = create_client(supabase_url, supabase_key)
+
+    # When a user session is supplied, attach it to the client so
+    # PostgREST evaluates RLS policies using the authenticated user.
+    if access_token and refresh_token:
+        client.auth.set_session(access_token, refresh_token)
+
+    return client
+
+
+def supabase_client_with_session(
+    access_token: str | None,
+    refresh_token: str | None,
+) -> Client:
+    client = supabase_client()
+
+    if access_token and refresh_token:
+        client.auth.set_session(
+            access_token,
+            refresh_token,
+        )
+
+    return client
 
 
 def _write_session_cookies(response: Response, access_token: str, refresh_token: str) -> None:
