@@ -3332,3 +3332,278 @@ ol {
   }
 }
 
+
+/* ---------- Manual Review Panel ---------- */
+
+.manual-review-panel {
+  margin: 34px 0 48px;
+  border: 1px solid #a04438;
+  background: #fbf1eb;
+}
+
+.manual-review-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 28px;
+  padding: 28px;
+  border-bottom: 1px solid rgba(160, 68, 56, 0.22);
+}
+
+.manual-review-header h2 {
+  margin: 5px 0 10px;
+  color: #57251f !important;
+  font-size: clamp(25px, 3vw, 36px);
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.manual-review-header p:last-child {
+  max-width: 680px;
+  margin: 0;
+  color: #6d4b45;
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.manual-review-badge {
+  flex-shrink: 0;
+  padding: 8px 12px;
+  border: 1px solid #a04438;
+  color: #8f3f35;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+}
+
+.manual-review-list {
+  display: grid;
+}
+
+.manual-review-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 30px;
+  padding: 21px 28px;
+  border-bottom: 1px solid rgba(160, 68, 56, 0.18);
+}
+
+.manual-review-item:last-child {
+  border-bottom: 0;
+}
+
+.manual-review-item-main {
+  min-width: 0;
+  display: grid;
+  gap: 7px;
+}
+
+.manual-review-field {
+  color: #805c55;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.manual-review-item-main strong {
+  color: #352722;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.manual-review-item-side {
+  flex-shrink: 0;
+  display: grid;
+  justify-items: end;
+  gap: 5px;
+}
+
+.manual-review-confidence {
+  color: #8f3f35;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.manual-review-reason {
+  color: #816963;
+  font-size: 11px;
+}
+
+.manual-review-generic {
+  display: grid;
+  gap: 8px;
+  padding: 22px 28px;
+}
+
+.manual-review-generic strong {
+  color: #57251f;
+  font-weight: 600;
+}
+
+.manual-review-generic span {
+  color: #6d4b45;
+  font-size: 13px;
+}
+
+@media (max-width: 600px) {
+  .manual-review-header {
+    padding: 21px 20px;
+    gap: 16px;
+  }
+
+  .manual-review-header h2 {
+    font-size: 27px;
+  }
+
+  .manual-review-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 19px 20px;
+  }
+
+  .manual-review-item-side {
+    justify-items: start;
+  }
+
+  .manual-review-generic {
+    padding: 20px;
+  }
+}
+
+
+/* ---------- Compliance Breakdown ---------- */
+
+.compliance-breakdown {
+  margin: 34px 0 42px;
+  border: 1px solid var(--line);
+  background: rgba(255, 252, 245, 0.55);
+}
+
+.compliance-breakdown-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 24px 28px;
+  border-bottom: 1px solid var(--line);
+}
+
+.compliance-breakdown-header h2 {
+  margin: 5px 0 0;
+  font-size: 26px;
+  font-weight: 500;
+  color: #24211d !important;
+}
+
+.food-review-note {
+  max-width: 280px;
+  padding: 9px 11px;
+  border: 1px solid #9b8c6f;
+  color: #655b4b;
+  font-size: 10px;
+  line-height: 1.4;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.compliance-field-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.compliance-field {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 18px 22px;
+  border-bottom: 1px solid var(--line);
+}
+
+.compliance-field:nth-child(odd) {
+  border-right: 1px solid var(--line);
+}
+
+.compliance-field:nth-last-child(-n + 2) {
+  border-bottom: 0;
+}
+
+.compliance-field-icon {
+  width: 25px;
+  height: 25px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.compliance-field > div {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.compliance-field strong {
+  color: #2c2823;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.compliance-field > div span {
+  color: #777066;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.compliance-field.present {
+  color: #355844;
+}
+
+.compliance-field.missing {
+  color: #8f3f35;
+  background: rgba(143, 63, 53, 0.035);
+}
+
+.compliance-field.missing strong {
+  color: #6b2e28;
+}
+
+.compliance-field.missing > div span {
+  color: #8f625c;
+  font-weight: 500;
+}
+
+@media (max-width: 600px) {
+  .compliance-breakdown-header {
+    flex-direction: column;
+    padding: 20px;
+  }
+
+  .food-review-note {
+    max-width: none;
+  }
+
+  .compliance-field-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .compliance-field:nth-child(odd) {
+    border-right: 0;
+  }
+
+  .compliance-field:nth-last-child(-n + 2) {
+    border-bottom: 1px solid var(--line);
+  }
+
+  .compliance-field:last-child {
+    border-bottom: 0;
+  }
+}
+

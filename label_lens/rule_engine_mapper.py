@@ -326,6 +326,19 @@ def map_to_rule_engine(llm_fields: Dict[str, Any]) -> Dict[str, Any]:
         "is_imported": is_imported,
         "has_shelf_life": has_shelf_life,
 
+        # Preserve normalized OCR confidence for manual-review decisions.
+        "ocr_confidence": (
+            lambda confidence: {
+                **confidence,
+                **(
+                    {"manufacturer": confidence["manufacturer_address"]}
+                    if "manufacturer" not in confidence
+                    and "manufacturer_address" in confidence
+                    else {}
+                ),
+            }
+        )(dict(llm_fields.get("ocr_confidence", {}) or {})),
+
         # Preserve the complete OCR evidence for downstream rule validation.
         "raw_text": llm_fields.get("raw_text"),
     }

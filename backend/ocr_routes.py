@@ -305,6 +305,23 @@ def _run_ocr_job(
 
         merged_fields = dict(final["merged_fields"])
 
+        # Pass OCR-derived confidence into the rule engine.
+        ocr_confidence = dict(
+            final.get("field_confidence", {}) or {}
+        )
+
+        # The OCR pipeline calls this field manufacturer_address,
+        # while the rule engine uses manufacturer.
+        if (
+            "manufacturer" not in ocr_confidence
+            and "manufacturer_address" in ocr_confidence
+        ):
+            ocr_confidence["manufacturer"] = ocr_confidence[
+                "manufacturer_address"
+            ]
+
+        merged_fields["ocr_confidence"] = ocr_confidence
+
         # Preserve complete OCR evidence for the rule engine.
         merged_fields["raw_text"] = final.get("raw_text", "")
 

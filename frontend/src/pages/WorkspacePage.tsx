@@ -24,6 +24,16 @@ function getConfidenceLevel(confidence: number) {
   return 'LOW'
 }
 
+const MANUAL_REVIEW_FIELDS: {
+  key: keyof MergedFields
+  label: string
+}[] = [
+  { key: 'mrp', label: 'MRP' },
+  { key: 'net_quantity', label: 'Net Quantity' },
+  { key: 'manufacturer_address', label: 'Manufacturer' },
+  { key: 'consumer_care', label: 'Consumer Care' },
+]
+
 const FIELD_LABELS: { key: keyof MergedFields; label: string }[] = [
   { key: 'brand', label: 'Brand' },
   { key: 'product_name', label: 'Product Name' },
@@ -83,6 +93,24 @@ export function WorkspacePage({
 }: WorkspacePageProps) {
   const hasImage = Boolean(files.front || files.back || files.side)
   const violations: Violation[] = result?.violations ?? []
+  const manualReviewFields = MANUAL_REVIEW_FIELDS
+    .map((item) => {
+      const value = fields?.[item.key]
+      const confidence = fieldConfidence[item.key]
+
+      return {
+        ...item,
+        value,
+        confidence,
+      }
+    })
+    .filter(
+      (item) =>
+        item.confidence !== undefined &&
+        item.confidence < 0.5,
+    )
+
+
 
   const getAIFixSuggestion = (ruleId: string, field: string) =>
     aiFixSuggestions.find(
@@ -223,8 +251,124 @@ export function WorkspacePage({
             {result?.summary ?? 'No compliance summary available.'}
           </p>
 
+          <section className="compliance-breakdown">
+            <div className="compliance-breakdown-header">
+              <div>
+                <p className="section-index">Compliance breakdown</p>
+                <h2>Declaration status</h2>
+              </div>
+
+              {fields?.product_type === 'food' ? (
+                <span className="food-review-note">
+                  Food-specific checks may also apply
+                </span>
+              ) : null}
+            </div>
+
+            <div className="compliance-field-grid">
+              {FIELD_LABELS.map((row) => {
+                const raw = fields?.[row.key]
+                const empty =
+                  raw === null ||
+                  raw === undefined ||
+                  raw === ''
+
+                return (
+                  <div
+                    key={row.key}
+                    className={
+                      empty
+                        ? 'compliance-field missing'
+                        : 'compliance-field present'
+                    }
+                  >
+                    <span className="compliance-field-icon">
+                      {empty ? '×' : '✓'}
+                    </span>
+
+                    <div>
+                      <strong>{row.label}</strong>
+                      <span>
+                        {empty
+                          ? 'Missing'
+                          : String(raw)}
+                      </span>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </section>
+
           {result?.needs_manual_review ? (
-            <p className="caution-line">Manual review required</p>
+            <section className="manual-review-panel">
+              <div className="manual-review-header">
+                <div>
+                  <p className="section-index">Attention</p>
+                  <h2>Manual Review Required</h2>
+                  <p>
+                    One or more critical label fields were detected
+                    with low OCR confidence. Verify these values
+                    against the original product image before
+                    finalizing the inspection.
+                  </p>
+                </div>
+
+                <span className="manual-review-badge">
+                  VERIFY
+                </span>
+              </div>
+
+              {manualReviewFields.length > 0 ? (
+                <div className="manual-review-list">
+                  {manualReviewFields.map((item) => {
+                    const empty =
+                      item.value === null ||
+                      item.value === undefined ||
+                      item.value === ''
+
+                    const confidence = item.confidence ?? 0
+
+                    return (
+                      <article
+                        key={String(item.key)}
+                        className="manual-review-item"
+                      >
+                        <div className="manual-review-item-main">
+                          <span className="manual-review-field">
+                            {item.label}
+                          </span>
+
+                          <strong>
+                            {empty
+                              ? 'Not extracted'
+                              : String(item.value)}
+                          </strong>
+                        </div>
+
+                        <div className="manual-review-item-side">
+                          <span className="manual-review-confidence">
+                            {Math.round(confidence * 100)}% confidence
+                          </span>
+
+                          <span className="manual-review-reason">
+                            Below 50% OCR threshold
+                          </span>
+                        </div>
+                      </article>
+                    )
+                  })}
+                </div>
+              ) : (
+                <div className="manual-review-generic">
+                  <strong>Verification recommended</strong>
+                  <span>
+                    Review the extracted fields and original label
+                    image before completing this inspection.
+                  </span>
+                </div>
+              )}
+            </section>
           ) : null}
 
           <section className="visual-inspection">
