@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { AccountMenu } from '../auth/AccountMenu'
 import type { User } from '../../types/auth'
 import { useI18n } from '../../i18n/I18nContext'
@@ -11,9 +12,20 @@ interface NavbarProps {
 
 export function Navbar({ user, onScan, onJump, onLogout }: NavbarProps) {
   const { t } = useI18n()
+  const [scrolled, setScrolled] = useState(false)
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 20)
+    }
+
+    handleScroll()
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
 
   return (
-    <header className="nav">
+    <header className={`nav ${scrolled ? 'scrolled' : ''}`}>
       <button type="button" className="wordmark" onClick={() => onJump('top')}>
         <img src="/logo.png" alt="Label Lens" className="brand-logo" />
       </button>
@@ -34,7 +46,7 @@ export function Navbar({ user, onScan, onJump, onLogout }: NavbarProps) {
           className="nav-cta"
           onClick={onScan}
         >
-          Scan Product
+          {t('scanProduct')}
         </button>
       )}
     </header>

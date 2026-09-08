@@ -242,7 +242,7 @@ export function DashboardPage({
             onClick={onOpenScan}
           >
             <span>+</span>
-            Scan New Product
+            {t('scanNewProduct')}
           </button>
         </section>
 
@@ -268,14 +268,14 @@ export function DashboardPage({
                 <div className="dashboard-kpi-top">
                   <span>02</span>
                   <span className="dashboard-mini-label">
-                    Outcome
+                    {t('outcome')}
                   </span>
                 </div>
                 <p>{t('complianceRate')}</p>
                 <strong>{analytics.complianceRate.toFixed(0)}%</strong>
                 <small>
-                  {analytics.compliant} compliant ·{' '}
-                  {analytics.nonCompliant} non-compliant
+                  {analytics.compliant} {t('compliant').toLowerCase()} ·{' '}
+                  {analytics.nonCompliant} {t('nonCompliant').toLowerCase()}
                 </small>
               </article>
 
@@ -301,7 +301,7 @@ export function DashboardPage({
                 <p>{t('needsAttention')}</p>
                 <strong>{analytics.manualReviews}</strong>
                 <small>
-                  {analytics.totalViolations} total violations
+                  {analytics.totalViolations} {t('totalViolations')}
                 </small>
               </article>
             </section>
@@ -311,7 +311,7 @@ export function DashboardPage({
                 <div className="dashboard-panel-header">
                   <div>
                     <p className="dashboard-panel-kicker">
-                      Compliance overview
+                      {t('complianceOverview')}
                     </p>
                     <h2>{t('inspectionOutcomes')}</h2>
                   </div>
@@ -346,7 +346,7 @@ export function DashboardPage({
                       <span className="legend-marker legend-safe" />
                       <div>
                         <strong>{analytics.compliant}</strong>
-                        <span>Compliant</span>
+                        <span>{t('compliant')}</span>
                       </div>
                     </div>
 
@@ -354,7 +354,7 @@ export function DashboardPage({
                       <span className="legend-marker legend-danger" />
                       <div>
                         <strong>{analytics.nonCompliant}</strong>
-                        <span>Non-compliant</span>
+                        <span>{t('nonCompliant')}</span>
                       </div>
                     </div>
 
@@ -373,7 +373,7 @@ export function DashboardPage({
                 <div className="dashboard-panel-header">
                   <div>
                     <p className="dashboard-panel-kicker">
-                      Activity
+                      {t('activity')}
                     </p>
                     <h2>{t('last7Days')}</h2>
                   </div>
@@ -443,7 +443,7 @@ export function DashboardPage({
                 <div className="dashboard-panel-header">
                   <div>
                     <p className="dashboard-panel-kicker">
-                      Rule analysis
+                      {t('ruleAnalysis')}
                     </p>
                     <h2>{t('topViolations')}</h2>
                   </div>
@@ -497,7 +497,7 @@ export function DashboardPage({
                 <div className="dashboard-panel-header">
                   <div>
                     <p className="dashboard-panel-kicker">
-                      Officer workload
+                      {t('officerWorkload')}
                     </p>
                     <h2>{t('attentionQueue')}</h2>
                   </div>
@@ -514,7 +514,7 @@ export function DashboardPage({
                   </div>
 
                   <div>
-                    <span>Violations</span>
+                    <span>{t('criticalViolations')}</span>
                     <strong>{analytics.totalViolations}</strong>
                     <small>{t('rulesTriggeredAcrossRecords')}</small>
                   </div>
@@ -525,7 +525,7 @@ export function DashboardPage({
                   className="dashboard-outline-action"
                   onClick={onOpenHistory}
                 >
-                  View inspection history →
+                  {t('viewInspectionHistory')}
                 </button>
               </article>
             </section>
@@ -534,7 +534,7 @@ export function DashboardPage({
               <div className="dashboard-panel-header">
                 <div>
                   <p className="dashboard-panel-kicker">
-                    Activity log
+                    {t('activityLog')}
                   </p>
                   <h2>{t('recentInspections')}</h2>
                 </div>
@@ -544,7 +544,7 @@ export function DashboardPage({
                   className="dashboard-panel-link"
                   onClick={onOpenHistory}
                 >
-                  View all →
+                  {t('viewAll')}
                 </button>
               </div>
 
@@ -574,7 +574,7 @@ export function DashboardPage({
                             extracted.generic_name.trim()
                           ? extracted.generic_name
                           : record.product_id ||
-                            'Product inspection'
+                            t('productInspection')
 
                     return (
                       <div
@@ -585,7 +585,7 @@ export function DashboardPage({
                           <strong>{productName}</strong>
                           <span>
                             {record.product_id ||
-                              'Inspection record'}
+                              t('inspectionRecord')}
                           </span>
                         </div>
 
@@ -631,7 +631,7 @@ export function DashboardPage({
                 <div>
                   <strong>{t('startNewInspection')}</strong>
                   <small>
-                    Scan front, back and side labels
+                    {t('scanFrontBackSideLabels')}
                   </small>
                 </div>
                 <span className="quick-action-arrow">→</span>
@@ -646,7 +646,7 @@ export function DashboardPage({
                 <div>
                   <strong>{t('reviewInspectionHistory')}</strong>
                   <small>
-                    Browse previously recorded products
+                    {t('browsePreviouslyRecordedProducts')}
                   </small>
                 </div>
                 <span className="quick-action-arrow">→</span>
