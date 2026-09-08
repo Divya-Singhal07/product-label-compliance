@@ -1622,6 +1622,19 @@ ol {
   border-color: rgba(251, 146, 60, 0.65);
 }
 
+.camera-quality.is-checking {
+  border-color: rgba(148, 163, 184, 0.45);
+  opacity: 0.9;
+}
+
+.camera-capture-btn.is-warning-capture {
+  border-color: rgba(251, 146, 60, 0.85);
+}
+
+.camera-capture-btn.is-warning-capture .camera-shutter {
+  background: #fb923c;
+}
+
 .camera-quality-icon {
   display: inline-flex;
   align-items: center;

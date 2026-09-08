@@ -8,7 +8,7 @@ import {
 
 export type Language = 'en' | 'hi'
 
-type TranslationKey =
+export type TranslationKey =
   | 'english'
   | 'hindi'
   | 'inspection'
@@ -169,6 +169,15 @@ type TranslationKey =
   | 'captureFrameFailed'
   | 'captureImageFailed'
   | 'captureLabel'
+  | 'qualityUnableToEvaluate'
+  | 'qualityBlurry'
+  | 'qualityTooDark'
+  | 'qualityTooBright'
+  | 'qualityGlare'
+  | 'qualityLowContrast'
+  | 'qualityChecking'
+  | 'captureAnyway'
+  | 'captureAnywayHint'
 
 const translations: Record<Language, Record<TranslationKey, string>> = {
   en: {
@@ -332,6 +341,15 @@ const translations: Record<Language, Record<TranslationKey, string>> = {
     captureFrameFailed: 'Could not capture the camera frame.',
     captureImageFailed: 'Could not create the captured image.',
     captureLabel: 'Capture label',
+    qualityUnableToEvaluate: 'Unable to evaluate image quality.',
+    qualityBlurry: 'Hold steady — image looks blurry.',
+    qualityTooDark: 'Too dark — move to better lighting.',
+    qualityTooBright: 'Too bright — reduce direct light.',
+    qualityGlare: 'Glare detected — tilt the product slightly.',
+    qualityLowContrast: 'Low contrast — improve lighting or avoid shadows.',
+    qualityChecking: 'Checking image quality…',
+    captureAnyway: 'Capture anyway?',
+    captureAnywayHint: 'Quality is not ideal — capture only if the label is readable.',
   },
 
   hi: {
@@ -347,7 +365,17 @@ const translations: Record<Language, Record<TranslationKey, string>> = {
     cameraApiUnavailable: 'कैमरा API उपलब्ध नहीं है',
     captureFrameFailed: 'कैमरा फ्रेम कैप्चर नहीं किया जा सका।',
     captureImageFailed: 'कैप्चर की गई छवि बनाई नहीं जा सकी।',
-    captureLabel: 'लेबल कैप्चर करें',  hindi: 'हिन्दी',
+    hindi: 'हिन्दी',
+    captureLabel: 'लेबल कैप्चर करें',
+    qualityUnableToEvaluate: 'छवि गुणवत्ता का मूल्यांकन नहीं किया जा सका।',
+    qualityBlurry: 'स्थिर रखें — छवि धुंधली लग रही है।',
+    qualityTooDark: 'बहुत अंधेरा है — बेहतर रोशनी में जाएं।',
+    qualityTooBright: 'बहुत चमकदार है — सीधी रोशनी कम करें।',
+    qualityGlare: 'चमक का पता चला — उत्पाद को थोड़ा झुकाएं।',
+    qualityLowContrast: 'कम कंट्रास्ट — रोशनी सुधारें या छाया से बचें।',
+    qualityChecking: 'छवि गुणवत्ता जांची जा रही है…',
+    captureAnyway: 'फिर भी कैप्चर करें?',
+    captureAnywayHint: 'गुणवत्ता आदर्श नहीं है — केवल तभी कैप्चर करें जब लेबल पढ़ने योग्य हो।',
     inspection: 'निरीक्षण',
     history: 'इतिहास',
     dashboard: 'डैशबोर्ड',
