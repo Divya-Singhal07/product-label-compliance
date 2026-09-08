@@ -185,6 +185,70 @@ async function pollForResult(jobId: string): Promise<AnalyzeResponse> {
   )
 }
 
+export async function recheckCompliance(
+  jobId: string,
+  fields: Record<string, unknown>,
+): Promise<{
+  merged_fields: AnalyzeResponse["merged_fields"]
+  compliance_result: AnalyzeResponse["compliance_result"]
+  field_confidence: AnalyzeResponse["field_confidence"]
+  ai_fix_suggestions: AnalyzeResponse["ai_fix_suggestions"]
+  manual_corrections: Record<
+    string,
+    {
+      original: unknown
+      corrected: unknown
+    }
+  >
+}> {
+  const response = await fetch(
+    `${API_BASE}/jobs/${encodeURIComponent(jobId)}/recheck`,
+    {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ fields }),
+    },
+  )
+
+  if (!response.ok) {
+    throw await readError(
+      response,
+      'Failed to re-check compliance',
+    )
+  }
+
+  const body = await readBody(response)
+
+  if (
+    !body ||
+    typeof body !== 'object' ||
+    !('merged_fields' in body) ||
+    !('compliance_result' in body)
+  ) {
+    throw new ApiError(
+      'Compliance re-check response was malformed.',
+      response.status,
+    )
+  }
+
+  return body as {
+    merged_fields: AnalyzeResponse["merged_fields"]
+    compliance_result: AnalyzeResponse["compliance_result"]
+    field_confidence: AnalyzeResponse["field_confidence"]
+    ai_fix_suggestions: AnalyzeResponse["ai_fix_suggestions"]
+    manual_corrections: Record<
+      string,
+      {
+        original: unknown
+        corrected: unknown
+      }
+    >
+  }
+}
+
 export async function analyzeProduct(input: AnalyzeProductInput): Promise<AnalyzeResponse & { job_id: string }> {
   const uploads = collectUploads(input.views)
   const formData = new FormData()

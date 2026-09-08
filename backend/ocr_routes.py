@@ -451,6 +451,7 @@ def _run_ocr_job(
             "product_id": final["product_id"],
             "product_folder": final["product_folder"],
             "merged_fields": merged_fields,
+            "original_merged_fields": dict(merged_fields),
             "visual_boxes": visual_boxes,
             "field_confidence": final.get(
                 "field_confidence",
@@ -907,6 +908,187 @@ async def get_job_result(
     return job["result"]
 
 
+@router.post(
+    "/jobs/{job_id}/recheck"
+)
+async def recheck_compliance(
+    job_id: str,
+    payload: dict,
+    user=Depends(get_current_user),
+):
+    """Re-run deterministic compliance using officer-corrected fields."""
+
+    job = _JOBS.get(job_id)
+
+    if not job:
+        raise HTTPException(
+            status_code=404,
+            detail="Job not found",
+        )
+
+    if job.get("owner") != getattr(
+        user,
+        "id",
+        None,
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="Not authorized",
+        )
+
+    if job.get("status") != "completed":
+        raise HTTPException(
+            status_code=409,
+            detail="Job not completed yet",
+        )
+
+    result = job.get("result")
+
+    if not isinstance(result, dict):
+        raise HTTPException(
+            status_code=404,
+            detail="No result found",
+        )
+
+    corrected_fields = payload.get("fields")
+
+    if not isinstance(corrected_fields, dict):
+        raise HTTPException(
+            status_code=400,
+            detail="fields must be an object",
+        )
+
+    current_fields = dict(
+        result.get(
+            "merged_fields",
+            {},
+        )
+    )
+
+    # Only update known extracted fields.
+    allowed_fields = {
+        "brand",
+        "product_name",
+        "generic_name",
+        "net_quantity",
+        "mrp",
+        "mrp_inclusive_of_taxes",
+        "unit_sale_price",
+        "manufacturer_address",
+        "packer",
+        "importer",
+        "consumer_care",
+        "mfg_date",
+        "best_before",
+        "use_by",
+        "country_of_origin",
+        "product_type",
+        "specific_product",
+        "is_food",
+        "is_cosmetic",
+        "is_electronic",
+        "is_imported",
+        "has_shelf_life",
+    }
+
+    for field, value in corrected_fields.items():
+        if field in allowed_fields:
+            current_fields[field] = value
+
+    # Re-create the exact Rule Engine input from the corrected values.
+    try:
+        rule_input = map_to_rule_engine(
+            current_fields
+        )
+
+        compliance_result = run_compliance_check(
+            rule_input
+        )
+
+    except Exception as exc:
+        logger.exception(
+            "Re-check failed for job %s",
+            job_id,
+        )
+        raise HTTPException(
+            status_code=500,
+            detail=f"Compliance re-check failed: {exc}",
+        ) from exc
+
+    comp_dict = (
+        compliance_result
+        if isinstance(compliance_result, dict)
+        else None
+    )
+
+    if comp_dict is None:
+        raise HTTPException(
+            status_code=500,
+            detail="Compliance re-check returned no result",
+        )
+
+    # Record that these are officer-corrected values.
+    result["merged_fields"] = current_fields
+    result["compliance_result"] = comp_dict
+
+    result["manual_corrections"] = {
+        field: {
+            "original": result.get(
+                "original_merged_fields",
+                {}
+            ).get(field),
+            "corrected": current_fields.get(field),
+        }
+        for field in allowed_fields
+        if result.get(
+            "original_merged_fields",
+            {}
+        ).get(field) != current_fields.get(field)
+    }
+
+    # Refresh AI fix suggestions using the corrected values.
+    try:
+        result["ai_fix_suggestions"] = (
+            generate_ai_fix_suggestions(
+                violations=comp_dict.get(
+                    "violations",
+                    [],
+                ),
+                product_fields=current_fields,
+            )
+        )
+    except Exception as exc:
+        logger.warning(
+            "AI fix suggestion refresh failed after re-check "
+            "for job %s: %s",
+            job_id,
+            exc,
+        )
+
+    logger.info(
+        "Job %s compliance re-checked. New score: %s",
+        job_id,
+        comp_dict.get("score"),
+    )
+
+    return {
+        "merged_fields": current_fields,
+        "compliance_result": comp_dict,
+        "field_confidence": result.get(
+            "field_confidence",
+            {},
+        ),
+        "ai_fix_suggestions": result.get(
+            "ai_fix_suggestions",
+            [],
+        ),
+        "manual_corrections": result.get(
+            "manual_corrections",
+            {},
+        ),
+    }
+
+
 @router.get(
     "/jobs/{job_id}/pdf"
 )
@@ -1002,6 +1184,10 @@ async def download_compliance_pdf(
             field_confidence=field_confidence,
             ai_fix_suggestions=ai_fix_suggestions,
             visual_boxes=visual_boxes,
+            manual_corrections=result.get(
+                "manual_corrections",
+                {},
+            ),
         )
 
         return FileResponse(

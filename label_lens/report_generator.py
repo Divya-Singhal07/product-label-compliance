@@ -73,11 +73,13 @@ def generate_report(
     field_confidence=None,
     ai_fix_suggestions=None,
     visual_boxes=None,
+    manual_corrections=None,
 ):
 
     field_confidence = field_confidence or {}
     ai_fix_suggestions = ai_fix_suggestions or []
     visual_boxes = visual_boxes or {}
+    manual_corrections = manual_corrections or {}
 
     styles = getSampleStyleSheet()
 
@@ -423,12 +425,141 @@ def generate_report(
     story.append(checklist_table)
 
     # --------------------------------------------------------
+    # OFFICER VERIFICATION
+    # --------------------------------------------------------
+    if manual_corrections:
+        story.append(
+            Paragraph(
+                "4. Officer Verification",
+                section_style,
+            )
+        )
+
+        verification_data = [
+            [
+                Paragraph("FIELD", table_header_style),
+                Paragraph("ORIGINAL OCR", table_header_style),
+                Paragraph("OFFICER VERIFIED", table_header_style),
+                Paragraph("STATUS", table_header_style),
+            ]
+        ]
+
+        label_map = {
+            "brand": "Brand",
+            "product_name": "Product Name",
+            "generic_name": "Generic / Common Name",
+            "net_quantity": "Net Quantity",
+            "mrp": "Maximum Retail Price (MRP)",
+            "manufacturer_address": "Manufacturer",
+            "consumer_care": "Consumer Care",
+            "country_of_origin": "Country of Origin",
+            "mfg_date": "Manufacturing Date",
+            "best_before": "Best Before",
+            "use_by": "Use By / Expiry",
+        }
+
+        for field, correction in manual_corrections.items():
+            original = safe(
+                correction.get("original")
+            )
+            corrected = safe(
+                correction.get("corrected")
+            )
+
+            verification_data.append(
+                [
+                    Paragraph(
+                        label_map.get(
+                            field,
+                            field.replace("_", " ").title(),
+                        ),
+                        table_cell_style,
+                    ),
+                    Paragraph(
+                        original,
+                        table_cell_style,
+                    ),
+                    Paragraph(
+                        corrected,
+                        table_cell_style,
+                    ),
+                    Paragraph(
+                        "OFFICER VERIFIED",
+                        ParagraphStyle(
+                            f"Verified_{field}",
+                            parent=table_cell_style,
+                            fontName="Helvetica-Bold",
+                            textColor=colors.HexColor("#15803D"),
+                        ),
+                    ),
+                ]
+            )
+
+        verification_table = Table(
+            verification_data,
+            colWidths=[48 * mm, 44 * mm, 48 * mm, 40 * mm],
+            repeatRows=1,
+        )
+
+        verification_table.setStyle(
+            TableStyle(
+                [
+                    (
+                        "BACKGROUND",
+                        (0, 0),
+                        (-1, 0),
+                        colors.HexColor("#111827"),
+                    ),
+                    (
+                        "GRID",
+                        (0, 0),
+                        (-1, -1),
+                        0.5,
+                        colors.HexColor("#D1D5DB"),
+                    ),
+                    (
+                        "VALIGN",
+                        (0, 0),
+                        (-1, -1),
+                        "TOP",
+                    ),
+                    (
+                        "LEFTPADDING",
+                        (0, 0),
+                        (-1, -1),
+                        5,
+                    ),
+                    (
+                        "RIGHTPADDING",
+                        (0, 0),
+                        (-1, -1),
+                        5,
+                    ),
+                    (
+                        "TOPPADDING",
+                        (0, 0),
+                        (-1, -1),
+                        5,
+                    ),
+                    (
+                        "BOTTOMPADDING",
+                        (0, 0),
+                        (-1, -1),
+                        5,
+                    ),
+                ]
+            )
+        )
+
+        story.append(verification_table)
+
+    # --------------------------------------------------------
     # FIELD CONFIDENCE
     # --------------------------------------------------------
 
     story.append(
         Paragraph(
-            "4. Field Confidence",
+            "5. Field Confidence",
             section_style,
         )
     )
@@ -529,7 +660,7 @@ def generate_report(
 
     story.append(
         Paragraph(
-            "4. Violations",
+            "6. Violations",
             section_style,
         )
     )

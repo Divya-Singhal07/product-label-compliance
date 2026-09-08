@@ -66,6 +66,43 @@ function App() {
     }
   }, [previewUrls])
 
+  useEffect(() => {
+    function handleComplianceRechecked(event: Event) {
+      const customEvent =
+        event as CustomEvent<{
+          merged_fields?: MergedFields
+          compliance_result?: ComplianceResult | null
+          ai_fix_suggestions?: AIFixSuggestion[]
+        }>
+
+      const data = customEvent.detail
+
+      if (data.merged_fields) {
+        setFields(data.merged_fields)
+      }
+
+      if (data.compliance_result !== undefined) {
+        setResult(data.compliance_result)
+      }
+
+      if (data.ai_fix_suggestions) {
+        setAiFixSuggestions(data.ai_fix_suggestions)
+      }
+    }
+
+    window.addEventListener(
+      'label-lens:compliance-rechecked',
+      handleComplianceRechecked,
+    )
+
+    return () => {
+      window.removeEventListener(
+        'label-lens:compliance-rechecked',
+        handleComplianceRechecked,
+      )
+    }
+  }, [])
+
   function openScan() {
     if (user) {
       setMode('workspace')

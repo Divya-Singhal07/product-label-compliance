@@ -1,7 +1,10 @@
+import { useState } from 'react'
+
 import { AccountMenu } from '../components/auth/AccountMenu'
 import { UploadSlot } from '../components/workspace/UploadSlot'
 import { VisualBoxOverlay } from '../components/workspace/VisualBoxOverlay'
 import type { LabelView } from '../types/app'
+import { recheckCompliance } from '../services/api'
 import type { User } from '../types/auth'
 import type {
   AIFixSuggestion,
@@ -111,6 +114,74 @@ export function WorkspacePage({
     )
 
 
+
+  const [isEditingFields, setIsEditingFields] = useState(false)
+  const [isRechecking, setIsRechecking] = useState(false)
+  const [editedFields, setEditedFields] = useState<Partial<MergedFields>>({})
+  const [manualCorrections, setManualCorrections] = useState<
+    Record<string, { original: unknown; corrected: unknown }>
+  >({})
+
+  function startEditingFields() {
+    setEditedFields({ ...(fields ?? {}) })
+    setIsEditingFields(true)
+  }
+
+  function cancelEditingFields() {
+    setEditedFields({})
+    setIsEditingFields(false)
+  }
+
+  function updateEditedField(
+    key: keyof MergedFields,
+    value: string | boolean,
+  ) {
+    setEditedFields((current) => ({
+      ...current,
+      [key]: value,
+    }))
+  }
+
+  async function handleRecheckCompliance() {
+    if (!jobId) {
+      alert('No inspection job is available for re-check.')
+      return
+    }
+
+    setIsRechecking(true)
+
+    try {
+      const response = await recheckCompliance(
+        jobId,
+        editedFields as Record<string, unknown>,
+      )
+
+      // Update the local correction state immediately so the
+      // current page can show "Officer verified" badges.
+      setManualCorrections(
+        response.manual_corrections ?? {},
+      )
+
+      // Keep the parent App state synchronized.
+      window.dispatchEvent(
+        new CustomEvent('label-lens:compliance-rechecked', {
+          detail: response,
+        }),
+      )
+
+      setEditedFields({})
+      setIsEditingFields(false)
+    } catch (error) {
+      console.error('Compliance re-check failed', error)
+      alert(
+        error instanceof Error
+          ? error.message
+          : 'Failed to re-check compliance. Please try again.',
+      )
+    } finally {
+      setIsRechecking(false)
+    }
+  }
 
   const getAIFixSuggestion = (ruleId: string, field: string) =>
     aiFixSuggestions.find(
@@ -419,50 +490,170 @@ export function WorkspacePage({
             </div>
           </section>
 
-          <h2>Extracted fields</h2>
+          <div className="extracted-fields-header">
+            <h2>Extracted fields</h2>
 
-          <ul className="field-rows dense">
-            {FIELD_LABELS.map((row) => {
-              const raw = fields?.[row.key]
-              const empty = raw === null || raw === undefined || raw === ''
-              const confidence = fieldConfidence[row.key]
+            {!isEditingFields ? (
+              <button
+                type="button"
+                className="btn-outline"
+                onClick={startEditingFields}
+                disabled={isRechecking}
+              >
+                EDIT FIELDS
+              </button>
+            ) : null}
+          </div>
 
-              return (
-                <li
-                  key={row.key}
-                  className={empty ? 'field-row is-miss' : 'field-row is-ok'}
-                >
-                  <span className="field-label">{row.label}</span>
+          {isEditingFields ? (
+            <section className="field-editor">
+              <div className="field-editor-intro">
+                <div>
+                  <p className="section-index">Officer verification</p>
+                  <h3>Correct extracted declarations</h3>
+                  <p>
+                    Update any value that was missed or incorrectly
+                    extracted from the product label. Re-checking uses
+                    the same official compliance rules.
+                  </p>
+                </div>
+              </div>
 
-                  <span className="field-value">
-                    {empty ? '—' : String(raw)}
-                  </span>
+              <div className="field-editor-grid">
+                {FIELD_LABELS.map((row) => {
+                  const currentValue =
+                    editedFields[row.key] ?? fields?.[row.key]
 
-                  <span className="field-mark">
-                    <span
-                      className={
-                        empty
-                          ? 'field-mark'
-                          : confidence !== undefined
-                            ? `field-mark confidence-${getConfidenceLevel(
-                                confidence,
-                              ).toLowerCase()}`
-                            : 'field-mark'
-                      }
+                  const isBoolean =
+                    typeof currentValue === 'boolean'
+
+                  return (
+                    <label
+                      key={row.key}
+                      className="field-editor-row"
                     >
-                      {empty
-                        ? 'MISSING'
-                        : confidence !== undefined
-                          ? `${getConfidenceLevel(confidence)} · ${Math.round(
-                              confidence * 100,
-                            )}%`
-                          : 'PRESENT'}
+                      <span>{row.label}</span>
+
+                      {isBoolean ? (
+                        <select
+                          value={currentValue ? 'true' : 'false'}
+                          onChange={(event) =>
+                            updateEditedField(
+                              row.key,
+                              event.target.value === 'true',
+                            )
+                          }
+                        >
+                          <option value="true">Yes</option>
+                          <option value="false">No</option>
+                        </select>
+                      ) : (
+                        <input
+                          type="text"
+                          value={
+                            currentValue === null ||
+                            currentValue === undefined
+                              ? ''
+                              : String(currentValue)
+                          }
+                          placeholder={`Enter ${row.label.toLowerCase()}`}
+                          onChange={(event) =>
+                            updateEditedField(
+                              row.key,
+                              event.target.value,
+                            )
+                          }
+                        />
+                      )}
+                    </label>
+                  )
+                })}
+              </div>
+
+              <div className="field-editor-actions">
+                <button
+                  type="button"
+                  className="btn-outline"
+                  onClick={cancelEditingFields}
+                  disabled={isRechecking}
+                >
+                  CANCEL
+                </button>
+
+                <button
+                  type="button"
+                  className="btn-solid"
+                  onClick={handleRecheckCompliance}
+                  disabled={isRechecking}
+                >
+                  {isRechecking
+                    ? 'RE-CHECKING…'
+                    : 'RE-CHECK COMPLIANCE →'}
+                </button>
+              </div>
+            </section>
+          ) : (
+            <ul className="field-rows dense">
+              {FIELD_LABELS.map((row) => {
+                const raw = fields?.[row.key]
+                const empty =
+                  raw === null ||
+                  raw === undefined ||
+                  raw === ''
+
+                const confidence = fieldConfidence[row.key]
+
+                return (
+                  <li
+                    key={row.key}
+                    className={
+                      empty
+                        ? 'field-row is-miss'
+                        : 'field-row is-ok'
+                    }
+                  >
+                    <span className="field-label">
+                      {row.label}
                     </span>
-                  </span>
-                </li>
-              )
-            })}
-          </ul>
+
+                    <span className="field-value">
+                      {empty ? '—' : String(raw)}
+
+                      {manualCorrections[row.key] ? (
+                        <span className="officer-verified-badge">
+                          ✓ Officer verified
+                        </span>
+                      ) : null}
+                    </span>
+
+                    <span className="field-mark">
+                      <span
+                        className={
+                          empty
+                            ? 'field-mark'
+                            : confidence !== undefined
+                              ? `field-mark confidence-${getConfidenceLevel(
+                                  confidence,
+                                ).toLowerCase()}`
+                              : 'field-mark'
+                        }
+                      >
+                        {empty
+                          ? 'MISSING'
+                          : confidence !== undefined
+                            ? `${getConfidenceLevel(
+                                confidence,
+                              )} · ${Math.round(
+                                confidence * 100,
+                              )}%`
+                            : 'PRESENT'}
+                      </span>
+                    </span>
+                  </li>
+                )
+              })}
+            </ul>
+          )}
 
           <section className="code-scan-section">
             <div className="section-heading">
