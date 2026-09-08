@@ -1,6 +1,8 @@
-import { useId, useRef } from 'react'
+import { useId, useRef, useState } from 'react'
 
 import type { LabelView } from '../../types/app'
+
+import { CameraCapture } from './CameraCapture'
 
 interface UploadSlotProps {
   view: LabelView
@@ -20,9 +22,8 @@ export function UploadSlot({
   onClear,
 }: UploadSlotProps) {
   const id = useId()
-  const cameraId = useId()
   const inputRef = useRef<HTMLInputElement>(null)
-  const cameraInputRef = useRef<HTMLInputElement>(null)
+  const [cameraOpen, setCameraOpen] = useState(false)
 
   return (
     <article className="drop-slot">
@@ -85,25 +86,6 @@ export function UploadSlot({
         }}
       />
 
-      {/* Native camera capture */}
-      <input
-        ref={cameraInputRef}
-        id={cameraId}
-        className="sr-only"
-        type="file"
-        accept="image/*"
-        capture="environment"
-        onChange={(event) => {
-          const next = event.target.files?.[0]
-
-          if (next) {
-            onSelect(next)
-          }
-
-          event.target.value = ''
-        }}
-      />
-
       {!file ? (
         <div className="upload-actions">
           <button
@@ -117,7 +99,7 @@ export function UploadSlot({
           <button
             type="button"
             className="camera-btn"
-            onClick={() => cameraInputRef.current?.click()}
+            onClick={() => setCameraOpen(true)}
           >
             📷 Use Camera
           </button>
@@ -129,12 +111,22 @@ export function UploadSlot({
           <button
             type="button"
             className="text-btn"
-            onClick={() => cameraInputRef.current?.click()}
+            onClick={() => setCameraOpen(true)}
           >
             Retake
           </button>
         </div>
       )}
+      {cameraOpen ? (
+        <CameraCapture
+          label={title}
+          onCapture={(capturedFile) => {
+            setCameraOpen(false)
+            onSelect(capturedFile)
+          }}
+          onClose={() => setCameraOpen(false)}
+        />
+      ) : null}
     </article>
   )
 }
