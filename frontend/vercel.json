@@ -6,7 +6,7 @@
       "destination": "https://label-lens-he1o.onrender.com/api/:path*"
     },
     {
-      "source": "/(.*)",
+      "source": "/:path*",
       "destination": "/index.html"
     }
   ]
