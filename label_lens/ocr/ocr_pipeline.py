@@ -47,11 +47,10 @@ FIELD_DEFAULTS: Dict[str, Any] = {
 class OCRProcessor:
 
     def __init__(self, preferred_candidates: Optional[List[str]] = None):
-        # Balanced: 3 candidates
+        # Fast path: the enhanced candidate is normally sufficient.
+        # Additional candidates can be supplied explicitly when needed.
         self.preferred_candidates = preferred_candidates or [
             "enhanced",
-            "original",
-            "sharpened",
         ]
 
     def _normalize_fields(self, fields: Optional[Dict[str, Any]]) -> Dict[str, Any]:

@@ -280,8 +280,6 @@ def _run_ocr_job(
         ocr = OCRProcessor(
             preferred_candidates=[
                 "enhanced",
-                "original",
-                "sharpened",
             ]
         )
 
