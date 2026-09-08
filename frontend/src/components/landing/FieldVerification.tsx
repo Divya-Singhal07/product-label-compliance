@@ -1,3 +1,5 @@
+import { useI18n } from '../../i18n/I18nContext'
+
 const FIELDS: { label: string; value: string; state: 'ok' | 'warn' | 'miss' }[] =
   [
     { label: 'Brand', value: 'Present', state: 'ok' },
@@ -13,14 +15,13 @@ const FIELDS: { label: string; value: string; state: 'ok' | 'warn' | 'miss' }[] 
 const MARK = { ok: 'VERIFIED', warn: 'WARNING', miss: 'MISSING' }
 
 export function FieldVerification() {
+  const { t } = useI18n()
   return (
     <section className="fields-section">
       <div className="fields-head">
         <p className="section-index">04 — Extraction</p>
         <h2>
-          Every declaration,
-          <br />
-          in one reading.
+          {t('everyDeclaration')}
         </h2>
       </div>
       <ul className="field-rows">

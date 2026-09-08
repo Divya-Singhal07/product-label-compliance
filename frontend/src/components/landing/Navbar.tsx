@@ -1,5 +1,6 @@
 import { AccountMenu } from '../auth/AccountMenu'
 import type { User } from '../../types/auth'
+import { useI18n } from '../../i18n/I18nContext'
 
 interface NavbarProps {
   user: User | null
@@ -9,6 +10,8 @@ interface NavbarProps {
 }
 
 export function Navbar({ user, onScan, onJump, onLogout }: NavbarProps) {
+  const { t } = useI18n()
+
   return (
     <header className="nav">
       <button type="button" className="wordmark" onClick={() => onJump('top')}>
@@ -16,10 +19,10 @@ export function Navbar({ user, onScan, onJump, onLogout }: NavbarProps) {
       </button>
 
       <nav className="nav-links" aria-label="Landing">
-        <button type="button" onClick={() => onJump('product')}>Product</button>
-        <button type="button" onClick={() => onJump('how')}>How it Works</button>
-        <button type="button" onClick={() => onJump('compliance')}>Compliance</button>
-        <button type="button" onClick={() => onJump('about')}>About</button>
+        <button type="button" onClick={() => onJump('product')}>{t('product')}</button>
+        <button type="button" onClick={() => onJump('how')}>{t('howItWorks')}</button>
+        <button type="button" onClick={() => onJump('compliance')}>{t('compliance')}</button>
+        <button type="button" onClick={() => onJump('about')}>{t('about')}</button>
       </nav>
 
       {user ? (

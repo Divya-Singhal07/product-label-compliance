@@ -8,6 +8,8 @@ import { getMe } from './services/auth'
 import { analyzeProduct } from './services/api'
 import type { AppMode, LabelView, WorkspaceView } from './types/app'
 import type { AuthMode, User } from './types/auth'
+import { useI18n } from './i18n/I18nContext'
+
 import type {
   AIFixSuggestion,
   ComplianceResult,
@@ -17,6 +19,7 @@ import type {
 } from './types/compliance'
 
 function App() {
+  const { language, setLanguage } = useI18n()
   const [mode, setMode] = useState<AppMode>('landing')
   const [authInitialMode, setAuthInitialMode] = useState<AuthMode>('login')
   const [user, setUser] = useState<User | null>(null)
@@ -153,6 +156,22 @@ function App() {
 
   return (
     <>
+      <div className="global-language-switcher" aria-label="Language">
+        <button
+          type="button"
+          className={language === 'en' ? 'active' : ''}
+          onClick={() => setLanguage('en')}
+        >
+          EN
+        </button>
+        <button
+          type="button"
+          className={language === 'hi' ? 'active' : ''}
+          onClick={() => setLanguage('hi')}
+        >
+          हिन्दी
+        </button>
+      </div>
       {mode === 'auth' && (
         <AuthModal
           initialMode={authInitialMode}

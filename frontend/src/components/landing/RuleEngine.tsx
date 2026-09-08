@@ -1,3 +1,5 @@
+import { useI18n } from '../../i18n/I18nContext'
+
 const RULES: { name: string; state: 'pass' | 'warn' }[] = [
   { name: 'MRP Declaration', state: 'pass' },
   { name: 'Net Quantity', state: 'pass' },
@@ -7,16 +9,17 @@ const RULES: { name: string; state: 'pass' | 'warn' }[] = [
 ]
 
 export function RuleEngine() {
+  const { t } = useI18n()
   return (
     <section className="rules-section" id="about">
       <p className="section-index">05 — Engine</p>
       <div className="rules-layout">
         <h2>
-          Universal.
+          {t('universal')}
           <br />
-          Category.
+          {t('category')}
           <br />
-          Product.
+          {t('productLevel')}
         </h2>
         <ul className="rule-rows">
           {RULES.map((rule) => (

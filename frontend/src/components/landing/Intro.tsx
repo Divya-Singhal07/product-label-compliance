@@ -1,19 +1,20 @@
+import { useI18n } from '../../i18n/I18nContext'
+
 export function Intro() {
+  const { t } = useI18n()
+
   return (
     <section className="intro" id="product">
-      <p className="section-index">01 — Product</p>
+      <p className="section-index">{t('productSection')}</p>
       <h2>
-        One label.
+        {t('oneLabel')}
         <br />
-        Dozens of declarations.
+        {t('dozensDeclarations')}
         <br />
-        One compliance check.
+        {t('oneComplianceCheck')}
       </h2>
       <p className="intro-body">
-        Packaged commodities in India must declare identity, quantity, price,
-        manufacturer, consumer care, origin and date marking. Label Lens reads
-        the pack and screens it against Legal Metrology (Packaged Commodities)
-        Rules, 2011.
+{t('introBody')}
       </p>
     </section>
   )

@@ -1,6 +1,7 @@
 import { useId, useRef, useState } from 'react'
 
 import type { LabelView } from '../../types/app'
+import { useI18n } from '../../i18n/I18nContext'
 
 import { CameraCapture } from './CameraCapture'
 
@@ -14,13 +15,13 @@ interface UploadSlotProps {
 }
 
 export function UploadSlot({
-  view,
   title,
   file,
   previewUrl,
   onSelect,
   onClear,
 }: UploadSlotProps) {
+  const { t } = useI18n()
   const id = useId()
   const inputRef = useRef<HTMLInputElement>(null)
   const [cameraOpen, setCameraOpen] = useState(false)
@@ -36,7 +37,7 @@ export function UploadSlot({
             className="text-btn"
             onClick={onClear}
           >
-            Remove
+            {t('remove')}
           </button>
         ) : null}
       </header>
@@ -58,11 +59,11 @@ export function UploadSlot({
         {previewUrl ? (
           <img
             src={previewUrl}
-            alt={`${view} label preview`}
+            alt={`${title} ${t('labelPreview')}`}
           />
         ) : (
           <span>
-            Drop {view} label
+            {t('dropLabel')}
             <small>JPG / PNG</small>
           </span>
         )}
@@ -93,7 +94,7 @@ export function UploadSlot({
             className="text-btn"
             onClick={() => inputRef.current?.click()}
           >
-            Browse
+            {t('browse')}
           </button>
 
           <button
@@ -101,7 +102,7 @@ export function UploadSlot({
             className="camera-btn"
             onClick={() => setCameraOpen(true)}
           >
-            📷 Use Camera
+            {t('useCamera')}
           </button>
         </div>
       ) : (
@@ -113,7 +114,7 @@ export function UploadSlot({
             className="text-btn"
             onClick={() => setCameraOpen(true)}
           >
-            Retake
+            {t('retake')}
           </button>
         </div>
       )}

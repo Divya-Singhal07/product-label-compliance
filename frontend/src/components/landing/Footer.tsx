@@ -1,9 +1,12 @@
+import { useI18n } from '../../i18n/I18nContext'
+
 interface FooterProps {
   onScan: () => void
   onJump: (id: string) => void
 }
 
 export function Footer({ onScan, onJump }: FooterProps) {
+  const { t } = useI18n()
   return (
     <footer className="site-footer">
       <div>
@@ -13,13 +16,13 @@ export function Footer({ onScan, onJump }: FooterProps) {
       </div>
       <div className="footer-links">
         <button type="button" onClick={() => onJump('product')}>
-          Product
+          {t('product')}
         </button>
         <button type="button" onClick={() => onJump('how')}>
-          How it Works
+          {t('howItWorks')}
         </button>
         <button type="button" onClick={onScan}>
-          Contact
+          {t('contact')}
         </button>
       </div>
     </footer>

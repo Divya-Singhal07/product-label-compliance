@@ -3785,3 +3785,108 @@ ol {
   white-space: nowrap;
 }
 
+
+/* ---------- Language Switcher ---------- */
+
+.work-nav .language-switcher {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  margin-left: 0;
+  border: 1px solid var(--line);
+  background: transparent;
+  overflow: hidden;
+}
+
+.work-nav .language-switcher button {
+  appearance: none;
+  border: 0;
+  border-right: 1px solid var(--line);
+  background: transparent;
+  color: var(--mute);
+  min-height: 32px;
+  padding: 6px 10px;
+  font: inherit;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.work-nav .language-switcher button:last-child {
+  border-right: 0;
+}
+
+.work-nav .language-switcher button:hover,
+.work-nav .language-switcher button.active {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+@media (max-width: 1100px) {
+  .work-nav {
+    gap: 14px;
+  }
+
+  .work-nav .language-switcher button {
+    padding-inline: 8px;
+  }
+}
+
+@media (max-width: 700px) {
+  .work-nav .language-switcher {
+    grid-column: 2;
+    grid-row: 2;
+    justify-self: end;
+    align-self: center;
+  }
+}
+
+
+/* ---------- Global Language Switcher ---------- */
+
+.global-language-switcher {
+  position: fixed;
+  top: 18px;
+  right: 22px;
+  z-index: 1000;
+  display: inline-flex;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+}
+
+.global-language-switcher button {
+  appearance: none;
+  border: 0;
+  border-right: 1px solid var(--line);
+  background: transparent;
+  color: var(--mute);
+  min-height: 34px;
+  padding: 7px 11px;
+  font: inherit;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+}
+
+.global-language-switcher button:last-child {
+  border-right: 0;
+}
+
+.global-language-switcher button.active,
+.global-language-switcher button:hover {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+@media (max-width: 700px) {
+  .global-language-switcher {
+    top: 12px;
+    right: 12px;
+  }
+}
+

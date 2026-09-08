@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 
+import { useI18n } from '../../i18n/I18nContext'
+
 interface CameraCaptureProps {
   label: string
   onCapture: (file: File) => void
@@ -174,6 +176,8 @@ export function CameraCapture({
   onCapture,
   onClose,
 }: CameraCaptureProps) {
+  const { t } = useI18n()
+
   const videoRef = useRef<HTMLVideoElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const qualityCanvasRef = useRef<HTMLCanvasElement>(null)
@@ -184,7 +188,7 @@ export function CameraCapture({
 
   const [quality, setQuality] = useState<QualityState>({
     status: 'WARNING',
-    messages: ['Preparing camera…'],
+    messages: [t('cameraCapture') + '…'],
   })
 
   useEffect(() => {
@@ -356,7 +360,7 @@ export function CameraCapture({
     const context = canvas.getContext('2d')
 
     if (!context) {
-      setError('Could not capture the camera frame.')
+      setError(t('captureFrameFailed'))
       return
     }
 
@@ -371,7 +375,7 @@ export function CameraCapture({
     canvas.toBlob(
       (blob) => {
         if (!blob) {
-          setError('Could not create the captured image.')
+          setError(t('captureImageFailed'))
           return
         }
 
@@ -405,7 +409,7 @@ export function CameraCapture({
         <header className="camera-modal-header">
           <div>
             <p className="section-index">
-              Camera capture
+              {t('cameraCapture')}
             </p>
 
             <h2>{label} label</h2>
@@ -416,7 +420,7 @@ export function CameraCapture({
             className="text-btn"
             onClick={onClose}
           >
-            Close
+            {t('cameraClose')}
           </button>
         </header>
 
@@ -432,7 +436,7 @@ export function CameraCapture({
               className="text-btn"
               onClick={onClose}
             >
-              Back
+              {t('cameraBack')}
             </button>
           </div>
         ) : (
@@ -449,8 +453,7 @@ export function CameraCapture({
                 <div className="camera-guide-frame" />
 
                 <p>
-                  Align the product label inside
-                  the frame
+                  {t('alignLabel')}
                 </p>
               </div>
 
@@ -469,7 +472,7 @@ export function CameraCapture({
                       ✓
                     </span>
                     <span>
-                      Good to scan
+                      {t('goodToScan')}
                     </span>
                   </>
                 ) : (
@@ -480,7 +483,7 @@ export function CameraCapture({
 
                     <span>
                       {quality.messages[0] ??
-                        'Improve image quality'}
+                        t('improveImageQuality')}
                     </span>
                   </>
                 )}
@@ -505,7 +508,7 @@ export function CameraCapture({
                 className="camera-capture-btn"
                 disabled={!isReady}
                 onClick={handleCapture}
-                aria-label={`Capture ${label} label`}
+                aria-label={`${t('captureLabel')} ${label}`}
               >
                 <span className="camera-shutter" />
               </button>

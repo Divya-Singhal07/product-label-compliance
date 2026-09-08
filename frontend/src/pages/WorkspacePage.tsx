@@ -5,6 +5,7 @@ import { UploadSlot } from '../components/workspace/UploadSlot'
 import { VisualBoxOverlay } from '../components/workspace/VisualBoxOverlay'
 import type { LabelView } from '../types/app'
 import { recheckCompliance } from '../services/api'
+import { useI18n } from '../i18n/I18nContext'
 import type { User } from '../types/auth'
 import type {
   AIFixSuggestion,
@@ -94,8 +95,25 @@ export function WorkspacePage({
   onOpenDashboard,
   onLogout,
 }: WorkspacePageProps) {
+  const { t } = useI18n()
   const hasImage = Boolean(files.front || files.back || files.side)
   const violations: Violation[] = result?.violations ?? []
+
+  const translatedFieldLabel = (key: keyof MergedFields) => {
+    const labels: Partial<Record<keyof MergedFields, string>> = {
+      brand: t('brand'),
+      product_name: t('productName'),
+      generic_name: t('genericName'),
+      net_quantity: t('netQuantity'),
+      mrp: t('mrp'),
+      manufacturer_address: t('manufacturer'),
+      consumer_care: t('consumerCare'),
+      country_of_origin: t('countryOfOrigin'),
+      mfg_date: t('manufacturingDate'),
+    }
+
+    return labels[key] ?? String(key)
+  }
   const manualReviewFields = MANUAL_REVIEW_FIELDS
     .map((item) => {
       const value = fields?.[item.key]
@@ -223,7 +241,7 @@ export function WorkspacePage({
           Label Lens
         </button>
 
-        <p className="work-kicker">Inspection</p>
+        <p className="work-kicker">{t('inspection')}</p>
 
         <button type="button" className="text-btn" onClick={onBackHome}>
           ← Home
@@ -248,11 +266,10 @@ export function WorkspacePage({
 
       {view === 'scan' ? (
         <section className="work-scan">
-          <h1>Scan a product</h1>
+          <h1>{t('scanASproduct')}</h1>
 
           <p className="work-lede">
-            Upload front, back and optional side images. The backend will run
-            OCR extraction and compliance checking automatically.
+            {t('uploadInstructions')}
           </p>
 
           <div className="drop-grid">
@@ -260,7 +277,13 @@ export function WorkspacePage({
               <UploadSlot
                 key={slot.view}
                 view={slot.view}
-                title={slot.title}
+                title={
+                  slot.view === 'front'
+                    ? t('front')
+                    : slot.view === 'back'
+                      ? t('back')
+                      : t('side')
+                }
                 file={files[slot.view] ?? null}
                 previewUrl={previewUrls[slot.view] ?? null}
                 onSelect={(file) => onSelect(slot.view, file)}
@@ -272,10 +295,10 @@ export function WorkspacePage({
           <div className="work-process">
             {isProcessing ? (
               <p className="processing" role="status">
-                Analyzing… Keep this tab open.
+                {t('analyzingKeepOpen')}
               </p>
             ) : (
-              <p>Ready to analyze.</p>
+              <p>{t('readyToAnalyze')}</p>
             )}
           </div>
 
@@ -290,11 +313,11 @@ export function WorkspacePage({
         </section>
       ) : (
         <section className="work-result">
-          <p className="section-index">Result</p>
+          <p className="section-index">{t('result')}</p>
 
           <div className="result-hero">
             <div>
-              <p className="score-kicker">COMPLIANCE SCORE</p>
+              <p className="score-kicker">{t('complianceScore')}</p>
 
               <p className="score-giant small">
                 {result ? result.score.toFixed(0) : '—'}
@@ -312,9 +335,9 @@ export function WorkspacePage({
             >
               {result
                 ? result.is_compliant
-                  ? 'COMPLIANT'
+                  ? t('compliant')
                   : 'NON-COMPLIANT'
-                : 'AWAITING ANALYSIS'}
+                : t('awaitingAnalysis')}
             </p>
           </div>
 
@@ -325,8 +348,8 @@ export function WorkspacePage({
           <section className="compliance-breakdown">
             <div className="compliance-breakdown-header">
               <div>
-                <p className="section-index">Compliance breakdown</p>
-                <h2>Declaration status</h2>
+                <p className="section-index">{t('complianceBreakdown')}</p>
+                <h2>{t('declarationStatus')}</h2>
               </div>
 
               {fields?.product_type === 'food' ? (
@@ -361,7 +384,7 @@ export function WorkspacePage({
                       <strong>{row.label}</strong>
                       <span>
                         {empty
-                          ? 'Missing'
+                          ? t('missing')
                           : String(raw)}
                       </span>
                     </div>
@@ -375,8 +398,8 @@ export function WorkspacePage({
             <section className="manual-review-panel">
               <div className="manual-review-header">
                 <div>
-                  <p className="section-index">Attention</p>
-                  <h2>Manual Review Required</h2>
+                  <p className="section-index">{t('attention')}</p>
+                  <h2>{t('manualReviewRequired')}</h2>
                   <p>
                     One or more critical label fields were detected
                     with low OCR confidence. Verify these values
@@ -412,7 +435,7 @@ export function WorkspacePage({
 
                           <strong>
                             {empty
-                              ? 'Not extracted'
+                              ? t('notExtracted')
                               : String(item.value)}
                           </strong>
                         </div>
@@ -432,7 +455,7 @@ export function WorkspacePage({
                 </div>
               ) : (
                 <div className="manual-review-generic">
-                  <strong>Verification recommended</strong>
+                  <strong>{t('verificationRecommended')}</strong>
                   <span>
                     Review the extracted fields and original label
                     image before completing this inspection.
@@ -445,8 +468,8 @@ export function WorkspacePage({
           <section className="visual-inspection">
             <div className="visual-inspection-heading">
               <div>
-                <p className="section-index">Visual verification</p>
-                <h2>Detected label fields</h2>
+                <p className="section-index">{t('visualVerification')}</p>
+                <h2>{t('detectedLabelFields')}</h2>
               </div>
               <p>
                 Highlighted regions show where the OCR engine found the
@@ -491,7 +514,7 @@ export function WorkspacePage({
           </section>
 
           <div className="extracted-fields-header">
-            <h2>Extracted fields</h2>
+            <h2>{t('extractedFields')}</h2>
 
             {!isEditingFields ? (
               <button
@@ -509,8 +532,8 @@ export function WorkspacePage({
             <section className="field-editor">
               <div className="field-editor-intro">
                 <div>
-                  <p className="section-index">Officer verification</p>
-                  <h3>Correct extracted declarations</h3>
+                  <p className="section-index">{t('officerVerification')}</p>
+                  <h3>{t('correctExtractedDeclarations')}</h3>
                   <p>
                     Update any value that was missed or incorrectly
                     extracted from the product label. Re-checking uses
@@ -544,8 +567,8 @@ export function WorkspacePage({
                             )
                           }
                         >
-                          <option value="true">Yes</option>
-                          <option value="false">No</option>
+                          <option value="true">{t('yes')}</option>
+                          <option value="false">{t('no')}</option>
                         </select>
                       ) : (
                         <input
@@ -613,7 +636,7 @@ export function WorkspacePage({
                     }
                   >
                     <span className="field-label">
-                      {row.label}
+                      {translatedFieldLabel(row.key)}
                     </span>
 
                     <span className="field-value">
@@ -639,14 +662,14 @@ export function WorkspacePage({
                         }
                       >
                         {empty
-                          ? 'MISSING'
+                          ? t('missing').toUpperCase()
                           : confidence !== undefined
                             ? `${getConfidenceLevel(
                                 confidence,
                               )} · ${Math.round(
                                 confidence * 100,
                               )}%`
-                            : 'PRESENT'}
+                            : t('present').toUpperCase()}
                       </span>
                     </span>
                   </li>
@@ -658,7 +681,7 @@ export function WorkspacePage({
           <section className="code-scan-section">
             <div className="section-heading">
               <div>
-                <h2>Codes Detected</h2>
+                <h2>{t('codesDetected')}</h2>
                 <p>
                   QR codes and barcodes detected on the uploaded product views.
                 </p>
@@ -737,7 +760,7 @@ export function WorkspacePage({
                         >
                           <div className="code-result-header">
                             <div className="code-result-type">
-                              {barcode.type || 'BARCODE'}
+                              {barcode.type || t('barcode')}
                             </div>
 
                             <span
@@ -750,8 +773,8 @@ export function WorkspacePage({
                               {status === 'LABEL_MATCH'
                                 ? 'Label Match ✓'
                                 : status === 'NO_OCR_MATCH'
-                                  ? 'No OCR Match'
-                                  : 'Not Verified'}
+                                  ? t('noOcrMatch')
+                                  : t('notVerified')}
                             </span>
                           </div>
 
@@ -783,7 +806,7 @@ export function WorkspacePage({
 
           <div className="split-notes">
             <div>
-              <h2>Missing fields</h2>
+              <h2>{t('missingFields')}</h2>
 
               <p>
                 {result?.missing_fields?.length
@@ -793,7 +816,7 @@ export function WorkspacePage({
             </div>
 
             <div>
-              <h2>Warnings</h2>
+              <h2>{t('warnings')}</h2>
 
               <p>
                 {result?.warnings?.length
@@ -803,10 +826,10 @@ export function WorkspacePage({
             </div>
           </div>
 
-          <h2>Rule details</h2>
+          <h2>{t('ruleDetails')}</h2>
 
           {violations.length === 0 ? (
-            <p>No Violation records to display.</p>
+            <p>{t('noViolationRecords')}</p>
           ) : (
             <ul className="violation-stack">
               {violations.map((item) => {
@@ -833,39 +856,39 @@ export function WorkspacePage({
 
                     {item.legal_reference && (
                       <div className="rule-explanation">
-                        <strong>Legal Reference</strong>
+                        <strong>{t('legalReference')}</strong>
                         <span>{item.legal_reference}</span>
                       </div>
                     )}
 
                     {item.explanation && (
                       <div className="rule-explanation">
-                        <strong>Why this matters</strong>
+                        <strong>{t('whyThisMatters')}</strong>
                         <span>{item.explanation}</span>
                       </div>
                     )}
 
                     {item.suggestion && (
                       <div className="rule-explanation">
-                        <strong>How to fix</strong>
+                        <strong>{t('howToFix')}</strong>
                         <span>{item.suggestion}</span>
                       </div>
                     )}
 
                     {aiFix && (
                       <div className="rule-explanation ai-fix-suggestion">
-                        <strong>AI Fix Suggestion</strong>
+                        <strong>{t('aiFixSuggestion')}</strong>
 
                         <span>{aiFix.ai_fix}</span>
 
                         {aiFix.example && (
                           <span>
-                            <strong>Example:</strong> {aiFix.example}
+                            <strong>{t('example')}</strong> {aiFix.example}
                           </span>
                         )}
 
                         <span>
-                          <strong>AI Confidence:</strong>{' '}
+                          <strong>{t('aiConfidence')}</strong>{' '}
                           {Math.round(aiFix.confidence * 100)}%
                         </span>
                       </div>
@@ -876,7 +899,7 @@ export function WorkspacePage({
             </ul>
           )}
 
-          <h2>Report</h2>
+          <h2>{t('report')}</h2>
 
           <div className="hero-actions">
             <button
@@ -885,7 +908,7 @@ export function WorkspacePage({
               disabled={!jobId}
               onClick={handleDownloadPDF}
             >
-              DOWNLOAD PDF →
+              {t('downloadPdf')}
             </button>
 
             <button

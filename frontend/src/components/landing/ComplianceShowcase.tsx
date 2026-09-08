@@ -1,34 +1,32 @@
+import { useI18n } from '../../i18n/I18nContext'
+
 /** Illustrative marketing composition. Not live OCR or rule-engine output. */
 export function ComplianceShowcase() {
+  const { t } = useI18n()
   return (
     <section className="score-section" id="compliance">
       <div className="score-copy">
         <p className="section-index light">03 — Result</p>
-        <h2>
-          A score you
-          <br />
-          can stand behind.
-        </h2>
+        <h2>{t('scoreYouCanStandBehind')}</h2>
         <p>
-          Compliant means no high-severity violations. Medium and low findings
-          still surface for review. Manual review flags low-confidence reads.
+          {t('complianceExplanation')}
         </p>
       </div>
       <div className="score-stage">
-        <p className="score-kicker">COMPLIANCE SCORE</p>
+        <p className="score-kicker">{t('complianceScore')}</p>
         <p className="score-giant">94 / 100</p>
-        <p className="score-status">COMPLIANT</p>
+        <p className="score-status">{t('compliant')}</p>
         <dl className="score-meta">
           <div>
-            <dt>Rules checked</dt>
+            <dt>{t('rulesChecked')}</dt>
             <dd>3 layers</dd>
           </div>
           <div>
-            <dt>Critical violations</dt>
+            <dt>{t('criticalViolations')}</dt>
             <dd>0</dd>
           </div>
           <div>
-            <dt>Warnings</dt>
+            <dt>{t('warnings')}</dt>
             <dd>2</dd>
           </div>
         </dl>

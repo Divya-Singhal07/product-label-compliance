@@ -1,13 +1,17 @@
+import { useI18n } from '../../i18n/I18nContext'
+
 interface HeroProps {
   onScan: () => void
   onExplore: () => void
 }
 
 export function Hero({ onScan, onExplore }: HeroProps) {
+  const { t } = useI18n()
+
   return (
     <section className="hero" id="top">
       <div className="hero-copy">
-        <p className="eyebrow">SIH26034 · Legal Metrology</p>
+        <p className="eyebrow">{t('sihLegalMetrology')}</p>
 
         <h1>
           COMPLIANCE,
@@ -16,16 +20,16 @@ export function Hero({ onScan, onExplore }: HeroProps) {
         </h1>
 
         <p className="lede">
-          AI-powered packaged commodity label verification.
+          {t('aiPoweredVerification')}
         </p>
 
         <div className="hero-actions">
           <button type="button" className="btn-solid" onClick={onScan}>
-            SCAN A PRODUCT →
+            {t('scanAProduct')}
           </button>
 
           <button type="button" className="btn-ghost" onClick={onExplore}>
-            EXPLORE HOW IT WORKS
+            {t('exploreHowItWorks')}
           </button>
         </div>
       </div>
