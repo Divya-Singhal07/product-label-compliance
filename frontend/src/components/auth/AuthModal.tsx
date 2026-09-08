@@ -48,109 +48,131 @@ export function AuthModal({ initialMode = 'login', onSuccess, onClose }: AuthMod
   }
 
   async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    setError(null)
-    setNotice(null)
-    setLoading(true)
+  e.preventDefault()
+  setError(null)
+  setNotice(null)
+  setLoading(true)
 
-    try {
-      if (mode === 'login') {
-        if (!officerId.trim()) {
-          setError('Please enter your officer ID.')
-          setLoading(false)
-          return
-        }
-        if (!password) {
-          setError('Please enter your password.')
-          setLoading(false)
-          return
-        }
-        const result = await login({ officer_id: officerId.trim(), password })
-        if ('error' in result) {
-          setError(result.error)
-        } else {
-          onSuccess({ email: result.email, officer_id: officerId.trim() })
-        }
-      } else if (mode === 'forgot') {
-        if (!officerId.trim()) {
-          setError('Please enter your officer ID.')
-          setLoading(false)
-          return
-        }
-        const result = await forgotPassword(officerId.trim())
-        if (result.error) {
-          setError(result.error)
-        } else {
-          setNotice(result.message || 'Password reset link sent! Check your registered email inbox.')
-        }
+  try {
+    if (mode === 'login') {
+      const identifier = officerId.trim() || email.trim()
+      if (!identifier) {
+        setError('Please enter your officer ID or email.')
+        setLoading(false)
+        return
+      }
+      if (!password) {
+        setError('Please enter your password.')
+        setLoading(false)
+        return
+      }
+
+      const isEmail = identifier.includes('@')
+      const result = await login({
+        officer_id: isEmail ? undefined : identifier,
+        email: isEmail ? identifier : email.trim() || undefined,
+        password,
+      })
+
+      if (result && 'error' in result && result.error) {
+        setError(result.error)
+        return
+      }
+
+      if (result && 'success' in result && result.success) {
+        const resolvedOfficerId = result.officer_id || (isEmail ? '' : identifier)
+
+        onSuccess({
+        email: result.email,
+        officer_id: resolvedOfficerId
+      })
+      return
+      }
+
+      setError('Login failed. Please try again.')
+    } else if (mode === 'forgot') {
+      if (!officerId.trim()) {
+        setError('Please enter your officer ID.')
+        setLoading(false)
+        return
+      }
+      const result = await forgotPassword(officerId.trim())
+      if (result.error) {
+        setError(result.error)
       } else {
-        if (!fullName.trim()) {
-          setError('Please enter your full name.')
-          setLoading(false)
-          return
-        }
-        if (!officerId.trim()) {
-          setError('Please enter your officer ID.')
-          setLoading(false)
-          return
-        }
-        if (!email.trim()) {
-          setError('Please enter your official email.')
-          setLoading(false)
-          return
-        }
-        if (!department.trim()) {
-          setError('Please enter your department.')
-          setLoading(false)
-          return
-        }
-        if (!role) {
-          setError('Please select your role.')
-          setLoading(false)
-          return
-        }
-        if (password !== confirmPassword) {
-          setError('Passwords do not match.')
-          setLoading(false)
-          return
-        }
-        if (password.length < 6) {
-          setError('Password must be at least 6 characters.')
-          setLoading(false)
-          return
-        }
+        setNotice(
+          result.message ||
+            'Password reset link sent! Check your registered email inbox.',
+        )
+      }
+    } else {
+      if (!fullName.trim()) {
+        setError('Please enter your full name.')
+        setLoading(false)
+        return
+      }
+      if (!officerId.trim()) {
+        setError('Please enter your officer ID.')
+        setLoading(false)
+        return
+      }
+      if (!email.trim()) {
+        setError('Please enter your official email.')
+        setLoading(false)
+        return
+      }
+      if (!department.trim()) {
+        setError('Please enter your department.')
+        setLoading(false)
+        return
+      }
+      if (!role) {
+        setError('Please select your role.')
+        setLoading(false)
+        return
+      }
+      if (password !== confirmPassword) {
+        setError('Passwords do not match.')
+        setLoading(false)
+        return
+      }
+      if (password.length < 6) {
+        setError('Password must be at least 6 characters.')
+        setLoading(false)
+        return
+      }
 
-        const result = await register({
-          full_name: fullName.trim(),
-          officer_id: officerId.trim(),
-          email: email.trim(),
-          password,
-          confirm_password: confirmPassword,
-          department: department.trim(),
+      const result = await register({
+        full_name: fullName.trim(),
+        officer_id: officerId.trim(),
+        email: email.trim(),
+        password,
+        confirm_password: confirmPassword,
+        department: department.trim(),
+        role,
+      })
+
+      if ('error' in result) {
+        setError(result.error)
+      } else if ('notice' in result) {
+        setNotice(result.notice)
+        setMode('login')
+      } else {
+        onSuccess({
+          email: result.email,
+          officer_id: officerId,
+          full_name: fullName,
+          department,
           role,
         })
-
-        if ('error' in result) {
-          setError(result.error)
-        } else if ('notice' in result) {
-          setNotice(result.notice)
-          setMode('login')
-        } else {
-          onSuccess({
-            email: result.email,
-            officer_id: officerId,
-            full_name: fullName,
-            department,
-            role,
-          })
-        }
       }
-    } catch {
-      setError('Something went wrong. Please try again.')
-    } finally {
-      setLoading(false)
     }
+  } catch {
+    setError('Something went wrong. Please try again.')
+  } finally {
+    setLoading(false)
   }
+}
 
   function handleOverlayClick(e: React.MouseEvent) {
     if (e.target === overlayRef.current) onClose()
@@ -240,14 +262,14 @@ export function AuthModal({ initialMode = 'login', onSuccess, onClose }: AuthMod
           {mode === 'login' ? (
             <>
               <label>
-                <span>Officer ID</span>
+                <span>Officer ID or Email</span>
                 <input
-                  id="auth-officer-id"
+                  
                   type="text"
                   value={officerId}
                   onChange={(e) => setOfficerId(e.target.value)}
                   autoComplete="username"
-                  placeholder="e.g. OFC-2024-001"
+                  placeholder="e.g. OFC-2024-001 or or you@dept.gov.in"
                   required
                   disabled={loading}
                 />

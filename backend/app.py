@@ -149,18 +149,24 @@ async def api_login(request: Request):
     """
     body = await request.json()
     officer_id: str = (body.get("officer_id") or "").strip()
+    email = (body.get("email") or "").strip()
     password: str = body.get("password") or ""
 
-    if not officer_id or not password:
-        return JSONResponse({"error": "Officer ID and password are required."}, status_code=400)
-
-    # Resolve Officer ID → email
-    email = _resolve_email(officer_id)
-    if not email:
+    if (not officer_id and not email) or not password:
         return JSONResponse(
-            {"error": "No account found for that Officer ID."},
-            status_code=401,
+            {"error": "Officer ID or email, and password, are required."},
+            status_code=400,
         )
+
+    if not email:
+        email = _resolve_email(officer_id)
+        if not email:
+            return JSONResponse(
+                {"error": "No account found for that Officer ID."},
+                status_code=401,
+            )
+
+    # then the existing sign_in_with_password({"email": email, "password": password})       
 
     try:
         result = supabase_client().auth.sign_in_with_password(

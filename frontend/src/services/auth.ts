@@ -14,7 +14,8 @@ export async function getMe(): Promise<User | null> {
 }
 
 export interface LoginInput {
-  officer_id: string
+  officer_id?: string
+  email?: string
   password: string
 }
 
@@ -31,6 +32,7 @@ export interface RegisterInput {
 export interface AuthSuccess {
   success: true
   email: string
+  officer_id?: string
 }
 
 export interface AuthNotice {
