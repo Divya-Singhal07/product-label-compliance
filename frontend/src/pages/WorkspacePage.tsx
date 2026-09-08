@@ -8,6 +8,7 @@ import type {
   ComplianceResult,
   MergedFields,
   VisualBoxes,
+  CodeScan,
   Violation,
 } from '../types/compliance'
 
@@ -44,6 +45,7 @@ interface WorkspacePageProps {
   fields: MergedFields | null
   fieldConfidence: Record<string, number>
   visualBoxes: VisualBoxes
+  codeScans: Record<string, CodeScan>
   result: ComplianceResult | null
   aiFixSuggestions: AIFixSuggestion[]
   jobId: string | null
@@ -64,6 +66,7 @@ export function WorkspacePage({
   fields,
   fieldConfidence,
   visualBoxes,
+  codeScans,
   result,
   aiFixSuggestions,
   jobId,
@@ -246,6 +249,7 @@ export function WorkspacePage({
                     <VisualBoxOverlay
                       src={previewUrl}
                       boxes={boxes}
+                      codeScan={codeScans[slot.view]}
                     />
                   </article>
                 )
@@ -297,6 +301,132 @@ export function WorkspacePage({
               )
             })}
           </ul>
+
+          <section className="code-scan-section">
+            <div className="section-heading">
+              <div>
+                <h2>Codes Detected</h2>
+                <p>
+                  QR codes and barcodes detected on the uploaded product views.
+                </p>
+              </div>
+            </div>
+
+            <div className="code-scan-grid">
+              {Object.entries(codeScans).map(([viewName, scan]) => {
+                if (scan.total_codes === 0) return null
+
+                return (
+                  <article
+                    key={viewName}
+                    className="code-scan-card"
+                  >
+                    <header>
+                      <div>
+                        <span className="visual-view-kicker">
+                          {viewName}
+                        </span>
+                        <h3>
+                          {viewName.charAt(0).toUpperCase() +
+                            viewName.slice(1)}{' '}
+                          label
+                        </h3>
+                      </div>
+
+                      <span className="visual-box-count">
+                        {scan.total_codes} detected
+                      </span>
+                    </header>
+
+                    {scan.qr_codes.map((qr, index) => (
+                      <div
+                        key={`qr-${index}-${qr.data}`}
+                        className="code-result"
+                      >
+                        <div className="code-result-header">
+                          <div className="code-result-type">
+                            QR CODE
+                          </div>
+                          <span className="code-status is-info">
+                            Decoded ✓
+                          </span>
+                        </div>
+
+                        <div className="code-result-value">
+                          {/^(https?:\/\/)/i.test(qr.data) ? (
+                            <a
+                              href={qr.data}
+                              target="_blank"
+                              rel="noreferrer"
+                            >
+                              {qr.data}
+                            </a>
+                          ) : (
+                            qr.data
+                          )}
+                        </div>
+
+                        <div className="code-result-message">
+                          {qr.verification?.message ??
+                            'QR payload decoded successfully.'}
+                        </div>
+                      </div>
+                    ))}
+
+                    {scan.barcodes.map((barcode, index) => {
+                      const status =
+                        barcode.verification?.status ?? 'UNVERIFIED'
+
+                      return (
+                        <div
+                          key={`barcode-${index}-${barcode.data}`}
+                          className="code-result"
+                        >
+                          <div className="code-result-header">
+                            <div className="code-result-type">
+                              {barcode.type || 'BARCODE'}
+                            </div>
+
+                            <span
+                              className={`code-status ${
+                                status === 'LABEL_MATCH'
+                                  ? 'is-success'
+                                  : 'is-warning'
+                              }`}
+                            >
+                              {status === 'LABEL_MATCH'
+                                ? 'Label Match ✓'
+                                : status === 'NO_OCR_MATCH'
+                                  ? 'No OCR Match'
+                                  : 'Not Verified'}
+                            </span>
+                          </div>
+
+                          <div className="code-result-value">
+                            {barcode.data}
+                          </div>
+
+                          <div className="code-result-message">
+                            {barcode.verification?.message ??
+                              'Barcode decoded successfully.'}
+                          </div>
+                        </div>
+                      )
+                    })}
+
+                  </article>
+                )
+              })}
+
+              {Object.values(codeScans).every(
+                (scan) => scan.total_codes === 0,
+              ) && (
+                <p className="code-scan-empty">
+                  No QR codes or barcodes detected.
+                </p>
+              )}
+            </div>
+          </section>
 
           <div className="split-notes">
             <div>

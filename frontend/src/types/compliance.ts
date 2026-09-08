@@ -81,12 +81,35 @@ export interface VisualBox {
 
 export type VisualBoxes = Record<string, Record<string, VisualBox>>
 
+export interface CodeVerification {
+  status: 'DECODED' | 'LABEL_MATCH' | 'NO_OCR_MATCH' | 'UNVERIFIED'
+  message: string
+}
+
+export interface CodeScan {
+  image: string | null
+  qr_codes: Array<{
+    data: string
+    type: string
+    polygon: [number, number][]
+    verification?: CodeVerification
+  }>
+  barcodes: Array<{
+    data: string
+    type: string
+    polygon: [number, number][] | null
+    verification?: CodeVerification
+  }>
+  total_codes: number
+}
+
 export interface AnalyzeResponse {
   product_id: string
   product_folder: string
   merged_fields: MergedFields
   field_confidence: Record<string, number>
   visual_boxes: VisualBoxes
+  code_scans: Record<string, CodeScan>
   ai_fix_suggestions: AIFixSuggestion[]
   compliance_result: ComplianceResult | null
   views: Record<string, unknown>

@@ -426,6 +426,10 @@ def _run_ocr_job(
                 "field_confidence",
                 {},
             ),
+            "code_scans": final.get(
+                "code_scans",
+                {},
+            ),
             "ai_fix_suggestions": ai_fix_suggestions,
             "compliance_result": comp_dict,
             "views": final.get(

@@ -12,6 +12,7 @@ from .field_extractor import extract_fields
 from .field_confidence import build_field_confidence, build_field_boxes
 from .llm_extractor import extract_fields_with_llm
 from .paddle_runner import run_ocr_on_candidates
+from .code_scanner import scan_codes
 from .product_id import generate_product_id
 
 logger = logging.getLogger(__name__)
@@ -189,6 +190,39 @@ class OCRProcessor:
         if not candidates:
             raise ValueError("No preprocessed images found in result")
 
+        # Scan the original uploaded image for QR codes and barcodes.
+        code_scan = {
+            "image": preprocessed_result.get("source_path"),
+            "qr_codes": [],
+            "barcodes": [],
+            "total_codes": 0,
+        }
+
+        source_path = preprocessed_result.get("source_path")
+
+        if source_path:
+            try:
+                code_scan = scan_codes(source_path)
+            except Exception as e:
+                logger.warning(
+                    "Code scanning failed for view '%s': %s",
+                    preprocessed_result.get("view", "unknown"),
+                    e,
+                )
+
+        # Code verification is intentionally conservative:
+        # decoding a code is not the same as proving the external
+        # information behind it is authentic.
+        #
+        # Barcode: corroborate decoded value against OCR text.
+        # QR: successfully decoded, but external supplier verification
+        # is not claimed yet.
+        for qr in code_scan.get("qr_codes", []):
+            qr["verification"] = {
+                "status": "DECODED",
+                "message": "QR payload decoded successfully; external source not verified.",
+            }
+
         ocr_lines, visual_ocr_lines, best_candidate = run_ocr_on_candidates(
             candidates,
             preferred_order=self.preferred_candidates,
@@ -207,6 +241,27 @@ class OCRProcessor:
             method = "rules"
 
         fields = self._normalize_fields(fields)
+        ocr_text_normalized = " ".join(
+            str(line.get("text", "") or "").strip()
+            for line in ocr_lines
+        ).lower()
+
+        for barcode in code_scan.get("barcodes", []):
+            barcode_value = str(
+                barcode.get("data", "") or ""
+            ).strip()
+
+            if barcode_value and barcode_value.lower() in ocr_text_normalized:
+                barcode["verification"] = {
+                    "status": "LABEL_MATCH",
+                    "message": "Decoded barcode also appears in OCR text.",
+                }
+            else:
+                barcode["verification"] = {
+                    "status": "NO_OCR_MATCH",
+                    "message": "Barcode decoded, but its value was not found in OCR text.",
+                }
+
         field_confidence = build_field_confidence(fields, ocr_lines)
         field_boxes = build_field_boxes(fields, visual_ocr_lines)
         field_boxes = self._map_field_boxes_to_original(
@@ -221,6 +276,7 @@ class OCRProcessor:
             "fields": fields,
             "field_confidence": field_confidence,
             "field_boxes": field_boxes,
+            "code_scan": code_scan,
             "extraction_method": method,
             "num_lines": len(ocr_lines),
             "quality_metrics": preprocessed_result.get("quality_metrics"),
@@ -325,6 +381,20 @@ class OCRProcessor:
 
         raw_text = "\n".join(raw_text_parts)
 
+        # Aggregate QR/barcode results across all product views.
+        code_scans = {}
+
+        for view_name, view_data in view_outputs.items():
+            code_scans[view_name] = view_data.get(
+                "code_scan",
+                {
+                    "image": None,
+                    "qr_codes": [],
+                    "barcodes": [],
+                    "total_codes": 0,
+                },
+            )
+
         product_id = generate_product_id(
             brand=merged_fields.get("brand"),
             product_name=merged_fields.get("product_name"),
@@ -338,6 +408,7 @@ class OCRProcessor:
             "merged_fields": merged_fields,
             "field_confidence": field_confidence,
             "raw_text": raw_text,
+            "code_scans": code_scans,
             "front_fields": view_outputs.get(front_view_name, {}).get("fields", {}),
             "ready_for_rule_engine": True,
         }

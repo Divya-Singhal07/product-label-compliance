@@ -11,6 +11,7 @@ import type {
   ComplianceResult,
   MergedFields,
   VisualBoxes,
+  CodeScan,
 } from './types/compliance'
 
 function App() {
@@ -26,6 +27,7 @@ function App() {
   const [result, setResult] = useState<ComplianceResult | null>(null)
  const [aiFixSuggestions, setAiFixSuggestions] = useState<AIFixSuggestion[]>([])
  const [visualBoxes, setVisualBoxes] = useState<VisualBoxes>({})
+  const [codeScans, setCodeScans] = useState<Record<string, CodeScan>>({})
  const [jobId, setJobId] = useState<string | null>(null)
 
   useEffect(() => {
@@ -91,6 +93,7 @@ function App() {
       setResult(response.compliance_result ?? null)
       setAiFixSuggestions(response.ai_fix_suggestions ?? [])
       setVisualBoxes(response.visual_boxes ?? {})
+      setCodeScans(response.code_scans ?? {})
       setJobId(response.job_id)
       setWorkspaceView('result')
     } catch (error) {
@@ -132,6 +135,7 @@ function App() {
 	  fieldConfidence={fieldConfidence}
           aiFixSuggestions={aiFixSuggestions}
           visualBoxes={visualBoxes}
+          codeScans={codeScans}
           jobId={jobId}
           onSelect={(view, file) =>
             setFiles((current) => ({ ...current, [view]: file }))

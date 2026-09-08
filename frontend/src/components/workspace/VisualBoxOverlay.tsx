@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'react'
 
-import type { VisualBox } from '../../types/compliance'
+import type { CodeScan, VisualBox } from '../../types/compliance'
 
 interface VisualBoxOverlayProps {
   src: string
   boxes: Record<string, VisualBox>
+  codeScan?: CodeScan
   className?: string
 }
 
@@ -36,6 +37,7 @@ function confidenceLabel(value: number) {
 export function VisualBoxOverlay({
   src,
   boxes,
+  codeScan,
   className = '',
 }: VisualBoxOverlayProps) {
   const [dimensions, setDimensions] = useState({
@@ -55,6 +57,31 @@ export function VisualBoxOverlay({
     [boxes],
   )
 
+  const qrCodes = codeScan?.qr_codes ?? []
+  const barcodes = codeScan?.barcodes ?? []
+
+  const codeOverlays = useMemo(
+    () => [
+      ...qrCodes
+        .filter((code) => code.polygon && code.polygon.length >= 3)
+        .map((code, index) => ({
+          key: `qr-${index}-${code.data}`,
+          type: 'QR',
+          data: code.data,
+          polygon: code.polygon,
+        })),
+      ...barcodes
+        .filter((code) => code.polygon && code.polygon.length >= 3)
+        .map((code, index) => ({
+          key: `barcode-${index}-${code.data}`,
+          type: 'BARCODE',
+          data: code.data,
+          polygon: code.polygon as [number, number][],
+        })),
+    ],
+    [qrCodes, barcodes],
+  )
+
   return (
     <div className={`visual-box-container ${className}`}>
       <svg
@@ -66,7 +93,7 @@ export function VisualBoxOverlay({
         }
         preserveAspectRatio="xMidYMid meet"
         role="img"
-        aria-label="OCR field detection overlay"
+        aria-label="OCR fields and code detection overlay"
       >
         <image
           href={src}
@@ -92,9 +119,12 @@ export function VisualBoxOverlay({
         {dimensions.width > 0 &&
           dimensions.height > 0 &&
           validBoxes.map(({ field, value, polygon }) => {
-            const points = polygon.map(([x, y]) => `${x},${y}`).join(' ')
+            const points = polygon
+              .map(([x, y]) => `${x},${y}`)
+              .join(' ')
 
             const labelX = Math.min(...polygon.map(([x]) => x))
+
             const labelY = Math.max(
               18,
               Math.min(...polygon.map(([, y]) => y)) - 8,
@@ -120,20 +150,72 @@ export function VisualBoxOverlay({
               </g>
             )
           })}
+
+        {dimensions.width > 0 &&
+          dimensions.height > 0 &&
+          codeOverlays.map(({ key, type, data, polygon }) => {
+            const points = polygon
+              .map(([x, y]) => `${x},${y}`)
+              .join(' ')
+
+            const labelX = Math.min(...polygon.map(([x]) => x))
+
+            const labelY = Math.max(
+              18,
+              Math.min(...polygon.map(([, y]) => y)) - 10,
+            )
+
+            return (
+              <g key={key} className="visual-code-group">
+                <polygon
+                  points={points}
+                  className="visual-code-polygon"
+                />
+
+                <text
+                  x={labelX}
+                  y={labelY}
+                  className="visual-code-label-svg"
+                >
+                  {type}
+                </text>
+
+                <title>
+                  {type}: {data}
+                </title>
+              </g>
+            )
+          })}
       </svg>
 
-      {validBoxes.length > 0 ? (
+      {validBoxes.length > 0 || codeOverlays.length > 0 ? (
         <div className="visual-box-legend">
-          <span>
-            {validBoxes.length} field{validBoxes.length === 1 ? '' : 's'} detected
-          </span>
+          {validBoxes.length > 0 && (
+            <>
+              <span>
+                {validBoxes.length} field
+                {validBoxes.length === 1 ? '' : 's'} detected
+              </span>
 
-          <span className="visual-confidence">
-            {confidenceLabel(
-              Math.max(...validBoxes.map(({ value }) => value.confidence)),
-            )}{' '}
-            confidence
-          </span>
+              <span className="visual-confidence">
+                {confidenceLabel(
+                  Math.max(
+                    ...validBoxes.map(
+                      ({ value }) => value.confidence,
+                    ),
+                  ),
+                )}{' '}
+                confidence
+              </span>
+            </>
+          )}
+
+          {codeOverlays.length > 0 && (
+            <span className="visual-code-legend">
+              {codeOverlays.length} code
+              {codeOverlays.length === 1 ? '' : 's'} detected
+            </span>
+          )}
         </div>
       ) : null}
     </div>
