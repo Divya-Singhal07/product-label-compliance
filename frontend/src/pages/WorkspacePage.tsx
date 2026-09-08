@@ -55,6 +55,7 @@ interface WorkspacePageProps {
   onBackHome: () => void
   onOpenScan: () => void
   onOpenHistory: () => void
+  onOpenDashboard: () => void
   onLogout: () => void
 }
 
@@ -77,6 +78,7 @@ export function WorkspacePage({
   onBackHome,
   onOpenScan,
   onOpenHistory,
+  onOpenDashboard,
   onLogout,
 }: WorkspacePageProps) {
   const hasImage = Boolean(files.front || files.back || files.side)
@@ -133,6 +135,13 @@ export function WorkspacePage({
           onClick={onOpenHistory}
         >
           History
+        </button>
+        <button
+          type="button"
+          className="text-btn dashboard-nav-btn"
+          onClick={onOpenDashboard}
+        >
+          Dashboard
         </button>
 
         {user && <AccountMenu user={user} onLogout={onLogout} />}

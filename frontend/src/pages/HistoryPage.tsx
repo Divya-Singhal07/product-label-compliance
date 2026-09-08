@@ -84,14 +84,10 @@ export function HistoryPage({ onBack }: HistoryPageProps) {
               return (
                 <article key={record.id} className="history-card">
                   <div className="history-main">
-                    <p className="history-product">
-                      {productName}
-                    </p>
+                    <p className="history-product">{productName}</p>
 
                     {genericName && genericName !== productName ? (
-                      <p className="history-detail">
-                        {genericName}
-                      </p>
+                      <p className="history-detail">{genericName}</p>
                     ) : null}
 
                     <div className="history-details">
@@ -135,33 +131,6 @@ export function HistoryPage({ onBack }: HistoryPageProps) {
                 </article>
               )
             })}
-          </div>
-
-                <div className="history-meta">
-                  <span
-                    className={
-                      record.is_compliant
-                        ? 'history-status compliant'
-                        : 'history-status non-compliant'
-                    }
-                  >
-                    {record.is_compliant
-                      ? 'COMPLIANT'
-                      : 'NON-COMPLIANT'}
-                  </span>
-
-                  <span className="history-score">
-                    Score {record.confidence_score.toFixed(0)}%
-                  </span>
-
-                  {record.needs_manual_review ? (
-                    <span className="history-review">
-                      Manual review
-                    </span>
-                  ) : null}
-                </div>
-              </article>
-            ))}
           </div>
         )}
       </main>

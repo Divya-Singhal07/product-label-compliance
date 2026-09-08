@@ -3,6 +3,7 @@ import { AuthModal } from './components/auth/AuthModal'
 import { LandingPage } from './pages/LandingPage'
 import { WorkspacePage } from './pages/WorkspacePage'
 import { HistoryPage } from './pages/HistoryPage'
+import { DashboardPage } from './pages/DashboardPage'
 import { getMe } from './services/auth'
 import { analyzeProduct } from './services/api'
 import type { AppMode, LabelView, WorkspaceView } from './types/app'
@@ -22,6 +23,7 @@ function App() {
   const [authChecked, setAuthChecked] = useState(false)
   const [workspaceView, setWorkspaceView] = useState<WorkspaceView>('scan')
   const [showHistory, setShowHistory] = useState(false)
+  const [showDashboard, setShowDashboard] = useState(false)
   const [files, setFiles] = useState<Partial<Record<LabelView, File>>>({})
   const [fieldConfidence, setFieldConfidence] = useState<Record<string, number>>({})
   const [isProcessing, setIsProcessing] = useState(false)
@@ -69,6 +71,7 @@ function App() {
       setMode('workspace')
       setWorkspaceView('scan')
       setShowHistory(false)
+      setShowDashboard(false)
       window.scrollTo(0, 0)
     } else {
       setMode('auth')
@@ -127,7 +130,20 @@ function App() {
       )}
 
       {mode === 'workspace' ? (
-        showHistory ? (
+        showDashboard ? (
+          <DashboardPage
+            onBack={() => setShowDashboard(false)}
+            onOpenHistory={() => {
+              setShowDashboard(false)
+              setShowHistory(true)
+            }}
+            onOpenScan={() => {
+              setShowDashboard(false)
+              setShowHistory(false)
+              setWorkspaceView('scan')
+            }}
+          />
+        ) : showHistory ? (
           <HistoryPage onBack={() => setShowHistory(false)} />
         ) : (
         <WorkspacePage
@@ -157,6 +173,7 @@ function App() {
           onBackHome={() => setMode('landing')}
           onOpenScan={() => setWorkspaceView('scan')}
           onOpenHistory={() => setShowHistory(true)}
+          onOpenDashboard={() => setShowDashboard(true)}
           onLogout={handleLogout}
         />
         )
