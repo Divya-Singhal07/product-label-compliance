@@ -1015,6 +1015,7 @@ async def download_compliance_pdf(
     "/records"
 )
 async def get_past_records(
+    request: Request,
     user=Depends(get_current_user),
 ):
 
@@ -1052,7 +1053,10 @@ async def get_past_records(
         )
 
         query = (
-            supabase_client()
+            supabase_client_with_session(
+                request.cookies.get(ACCESS_COOKIE),
+                request.cookies.get(REFRESH_COOKIE),
+            )
             .table(
                 "inspection_records"
             )
