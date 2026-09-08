@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { AuthModal } from './components/auth/AuthModal'
 import { LandingPage } from './pages/LandingPage'
 import { WorkspacePage } from './pages/WorkspacePage'
+import { HistoryPage } from './pages/HistoryPage'
 import { getMe } from './services/auth'
 import { analyzeProduct } from './services/api'
 import type { AppMode, LabelView, WorkspaceView } from './types/app'
@@ -20,6 +21,7 @@ function App() {
   const [user, setUser] = useState<User | null>(null)
   const [authChecked, setAuthChecked] = useState(false)
   const [workspaceView, setWorkspaceView] = useState<WorkspaceView>('scan')
+  const [showHistory, setShowHistory] = useState(false)
   const [files, setFiles] = useState<Partial<Record<LabelView, File>>>({})
   const [fieldConfidence, setFieldConfidence] = useState<Record<string, number>>({})
   const [isProcessing, setIsProcessing] = useState(false)
@@ -66,6 +68,7 @@ function App() {
     if (user) {
       setMode('workspace')
       setWorkspaceView('scan')
+      setShowHistory(false)
       window.scrollTo(0, 0)
     } else {
       setMode('auth')
@@ -124,6 +127,9 @@ function App() {
       )}
 
       {mode === 'workspace' ? (
+        showHistory ? (
+          <HistoryPage onBack={() => setShowHistory(false)} />
+        ) : (
         <WorkspacePage
           user={user}
           view={workspaceView}
@@ -150,8 +156,10 @@ function App() {
           onAnalyze={handleAnalyze}
           onBackHome={() => setMode('landing')}
           onOpenScan={() => setWorkspaceView('scan')}
+          onOpenHistory={() => setShowHistory(true)}
           onLogout={handleLogout}
         />
+        )
       ) : (
         <LandingPage
           user={user}
