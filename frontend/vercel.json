@@ -3,7 +3,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://label-lens-he1o.onrender.com/api/:path*"
+      "destination": "https://have-toddler-sin-signing.trycloudflare.com/api/:path*"
     },
     {
       "source": "/:path*",
