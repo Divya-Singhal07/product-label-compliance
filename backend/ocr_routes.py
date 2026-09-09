@@ -578,13 +578,47 @@ def _run_ocr_job(
                     ),
                 }
 
-                supabase_client_with_session(
+                client = supabase_client_with_session(
                     officer_info.get("supabase_access_token"),
                     officer_info.get("supabase_refresh_token"),
-                ) \
-                    .table("inspection_records") \
-                    .insert(record) \
+                )
+
+                # Insert the inspection record normally.
+                client.table("inspection_records").insert(record).execute()
+
+                # Fetch the record we just created. Dashboard already has
+                # SELECT access to this table, so this avoids relying on
+                # INSERT ... RETURNING permissions.
+                latest = (
+                    client.table("inspection_records")
+                    .select("id")
+                    .eq(
+                        "officer_user_id",
+                        officer_info.get("officer_user_id"),
+                    )
+                    .eq(
+                        "product_id",
+                        record.get("product_id"),
+                    )
+                    .order("created_at", desc=True)
+                    .limit(1)
                     .execute()
+                )
+
+                if latest.data:
+                    _JOBS[job_id]["inspection_record_id"] = (
+                        latest.data[0]["id"]
+                    )
+                    logger.info(
+                        "Inspection record %s linked to job %s",
+                        latest.data[0]["id"],
+                        job_id,
+                    )
+                else:
+                    logger.warning(
+                        "Could not find inserted inspection record for job %s",
+                        job_id,
+                    )
 
             except Exception as db_exc:
 
@@ -912,6 +946,7 @@ async def get_job_result(
 async def recheck_compliance(
     job_id: str,
     payload: dict,
+    request: Request,
     user=Depends(get_current_user),
 ):
     """Re-run deterministic compliance using officer-corrected fields."""
@@ -1043,6 +1078,55 @@ async def recheck_compliance(
             {}
         ).get(field) != current_fields.get(field)
     }
+
+    # Persist corrected result to the original inspection record.
+    inspection_record_id = job.get("inspection_record_id")
+
+    if inspection_record_id:
+        try:
+            updated_record = {
+                "is_compliant": bool(
+                    comp_dict.get("is_compliant", False)
+                ),
+                "confidence_score": float(
+                    comp_dict.get("score", 0.0)
+                ),
+                "summary": comp_dict.get("summary", ""),
+                "needs_manual_review": bool(
+                    comp_dict.get(
+                        "needs_manual_review",
+                        False,
+                    )
+                ),
+                "extracted_fields": current_fields,
+                "violations": comp_dict.get("violations", []),
+                "missing_fields": comp_dict.get("missing_fields", []),
+                "warnings": comp_dict.get("warnings", []),
+            }
+
+            supabase_client_with_session(
+                request.cookies.get(ACCESS_COOKIE),
+                request.cookies.get(REFRESH_COOKIE),
+            ).table(
+                "inspection_records"
+            ).update(
+                updated_record
+            ).eq(
+                "id",
+                inspection_record_id,
+            ).execute()
+
+            logger.info(
+                "Inspection record %s updated after re-check",
+                inspection_record_id,
+            )
+
+        except Exception as db_exc:
+            logger.exception(
+                "Failed to persist re-check for job %s: %s",
+                job_id,
+                db_exc,
+            )
 
     # Refresh AI fix suggestions using the corrected values.
     try:
@@ -1219,9 +1303,7 @@ async def get_past_records(
     request: Request,
     user=Depends(get_current_user),
 ):
-
     try:
-
         user_metadata = (
             getattr(
                 user,
@@ -1237,9 +1319,7 @@ async def get_past_records(
         )
 
         officer_id = (
-            user_metadata.get(
-                "officer_id"
-            )
+            user_metadata.get("officer_id")
             or getattr(
                 user,
                 "email",
@@ -1253,14 +1333,16 @@ async def get_past_records(
             None,
         )
 
+        role = str(
+            user_metadata.get("role") or ""
+        ).strip().lower()
+
         query = (
             supabase_client_with_session(
                 request.cookies.get(ACCESS_COOKIE),
                 request.cookies.get(REFRESH_COOKIE),
             )
-            .table(
-                "inspection_records"
-            )
+            .table("inspection_records")
             .select("*")
             .order(
                 "created_at",
@@ -1268,24 +1350,23 @@ async def get_past_records(
             )
         )
 
-        if user_id:
-
+        # Officers see only their own inspections.
+        # Admins can see all inspection records.
+        if user_id and role != "admin":
             query = query.or_(
                 f"officer_user_id.eq.{user_id},"
                 f"officer_id.eq.{officer_id}"
             )
 
         response = query.limit(
-            50
+            500
         ).execute()
 
         return response.data or []
 
     except Exception as exc:
-
         logger.warning(
             "Failed to fetch past records: %s",
             exc,
         )
-
         return []

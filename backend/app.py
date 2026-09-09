@@ -114,9 +114,28 @@ def root():
 def api_me(request: Request):
     """Return the current authenticated user as JSON, or 401."""
     user = current_user(request)
+
     if not user:
-        return JSONResponse({"detail": "Not authenticated"}, status_code=401)
-    return JSONResponse({"email": user.email})
+        return JSONResponse(
+            {"detail": "Not authenticated"},
+            status_code=401,
+        )
+
+    metadata = (
+        getattr(user, "user_metadata", None)
+        or getattr(user, "raw_user_meta_data", None)
+        or {}
+    )
+
+    return JSONResponse(
+        {
+            "email": getattr(user, "email", ""),
+            "officer_id": metadata.get("officer_id"),
+            "full_name": metadata.get("full_name"),
+            "department": metadata.get("department"),
+            "role": metadata.get("role"),
+        }
+    )
 
 
 @app.post("/api/forgot-password")

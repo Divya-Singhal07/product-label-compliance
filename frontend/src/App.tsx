@@ -4,6 +4,7 @@ import { LandingPage } from './pages/LandingPage'
 import { WorkspacePage } from './pages/WorkspacePage'
 import { HistoryPage } from './pages/HistoryPage'
 import { DashboardPage } from './pages/DashboardPage'
+import { AdminDashboardPage } from './pages/AdminDashboardPage'
 import { getMe } from './services/auth'
 import { analyzeProduct } from './services/api'
 import type { AppMode, LabelView, WorkspaceView } from './types/app'
@@ -41,6 +42,12 @@ function App() {
     getMe().then((u) => {
       setUser(u)
       setAuthChecked(true)
+
+      if (u?.role?.toLowerCase() === 'admin') {
+        setMode('workspace')
+        setWorkspaceView('scan')
+        setShowDashboard(true)
+      }
       const params = new URLSearchParams(window.location.search)
       const qMode = params.get('mode')
       if (qMode === 'forgot' || qMode === 'login' || qMode === 'register') {
@@ -122,6 +129,10 @@ function App() {
     setUser(loggedInUser)
     setMode('workspace')
     setWorkspaceView('scan')
+    setShowHistory(false)
+    setShowDashboard(
+      loggedInUser.role?.toLowerCase() === 'admin',
+    )
     window.scrollTo(0, 0)
   }
 
@@ -187,18 +198,30 @@ function App() {
 
       {mode === 'workspace' ? (
         showDashboard ? (
-          <DashboardPage
-            onBack={() => setShowDashboard(false)}
-            onOpenHistory={() => {
-              setShowDashboard(false)
-              setShowHistory(true)
-            }}
-            onOpenScan={() => {
-              setShowDashboard(false)
-              setShowHistory(false)
-              setWorkspaceView('scan')
-            }}
-          />
+          user?.role?.toLowerCase() === 'admin' ? (
+            <AdminDashboardPage
+              user={user}
+              onOpenScan={() => {
+                setShowDashboard(false)
+                setShowHistory(false)
+                setWorkspaceView('scan')
+              }}
+              onLogout={handleLogout}
+            />
+          ) : (
+            <DashboardPage
+              onBack={() => setShowDashboard(false)}
+              onOpenHistory={() => {
+                setShowDashboard(false)
+                setShowHistory(true)
+              }}
+              onOpenScan={() => {
+                setShowDashboard(false)
+                setShowHistory(false)
+                setWorkspaceView('scan')
+              }}
+            />
+          )
         ) : showHistory ? (
           <HistoryPage onBack={() => setShowHistory(false)} />
         ) : (

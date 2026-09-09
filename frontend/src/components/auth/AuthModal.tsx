@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { forgotPassword, login, register } from '../../services/auth'
+import { forgotPassword, getMe, login, register } from '../../services/auth'
 import type { AuthMode, User } from '../../types/auth'
 
 interface AuthModalProps {
@@ -80,13 +80,19 @@ export function AuthModal({ initialMode = 'login', onSuccess, onClose }: AuthMod
       }
 
       if (result && 'success' in result && result.success) {
-        const resolvedOfficerId = result.officer_id || (isEmail ? '' : identifier)
+        const resolvedOfficerId =
+          result.officer_id || (isEmail ? '' : identifier)
 
-        onSuccess({
-        email: result.email,
-        officer_id: resolvedOfficerId
-      })
-      return
+        const currentUser = await getMe()
+
+        onSuccess(
+          currentUser ?? {
+            email: result.email,
+            officer_id: resolvedOfficerId,
+          },
+        )
+
+        return
       }
 
       setError('Login failed. Please try again.')
