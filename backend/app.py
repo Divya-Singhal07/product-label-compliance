@@ -1,4 +1,5 @@
 import sys
+import os
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -43,6 +44,7 @@ app.add_middleware(
         "http://127.0.0.1:5173",
         "http://localhost:5174",
         "http://127.0.0.1:5174",
+        "https://label-lens-2026.vercel.app"
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -55,13 +57,14 @@ app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="stat
 app.include_router(ocr_router)
 
 def set_session_cookies(response: Response, access_token: str, refresh_token: str) -> None:
+    cross_site = os.getenv("CROSS_SITE_COOKIES", "false").lower() in ("1", "true", "yes")
     for cookie_name, token in ((ACCESS_COOKIE, access_token), (REFRESH_COOKIE, refresh_token)):
         response.set_cookie(
             key=cookie_name,
             value=token,
             httponly=True,
-            samesite="lax",
-            secure=False,
+            samesite="none" if cross_site else "lax",
+            secure=True if cross_site else False,
             path="/",
             max_age=60 * 60 * 24 * 7,
         )
@@ -69,8 +72,14 @@ def set_session_cookies(response: Response, access_token: str, refresh_token: st
 
 
 def clear_session_cookies(response: Response) -> None:
-    response.delete_cookie(ACCESS_COOKIE, path="/")
-    response.delete_cookie(REFRESH_COOKIE, path="/")
+    cross_site = os.getenv("CROSS_SITE_COOKIES", "false").lower() in ("1", "true", "yes")
+    for cookie_name in (ACCESS_COOKIE, REFRESH_COOKIE):
+        response.delete_cookie(
+            key=cookie_name,
+            path="/",
+            samesite="none" if cross_site else "lax",
+            secure=True if cross_site else False,
+        )
 
 
 def _resolve_email(officer_id: str) -> str | None:
