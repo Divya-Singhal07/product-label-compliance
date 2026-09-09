@@ -3,7 +3,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://have-toddler-sin-signing.trycloudflare.com/api/:path*"
+      "destination": "https://upper-chronicles-settlement-carrying.trycloudflare.com/api/:path*"
     },
     {
       "source": "/:path*",
