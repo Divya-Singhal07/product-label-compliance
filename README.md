@@ -22,6 +22,12 @@ Software System to check compliance of Packaged Commodities under Legal Metrolog
 **Department:** Department of Consumer Affairs
 
 ---
+## 🔗 Project Resources
+
+- 🎥 **Demo Video:** [Click Here](https://drive.google.com/file/d/1WnfZzAmzrRv_XRRop1cJoBgUAiR7EySe/view?usp=drive_link)
+- 📄 **Project Presentation / PDF:** [Click Here](https://drive.google.com/file/d/1oKHJWDfrx1dhiszYby_YXqkYZqhEYbQs/view?usp=drive_link)
+
+---
 
 ## About Label Lens
 
