@@ -3,7 +3,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://frankfurt-pollution-finds-racing.trycloudflare.com/api/:path*"
+      "destination": "https://oxygen-happen-person-utilize.trycloudflare.com/api/:path*"
     },
     {
       "source": "/:path*",
